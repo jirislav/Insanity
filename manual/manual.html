@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<title>Jiří Kozlovský's myGame reference</title>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="/css/global.css" />
+<link rel="stylesheet" type="text/css" href="/css/myGameManual.css" />
+<body>
+<h1>myGame reference</h1>
+<!--<p>This reference is for the <b>touchpad version</b>, which is actually the most played version at all. If you are bored of such low difficulty, you can try out much harder version initially made for gaming mouse. In that version you gain more score points than in the touchpad one.<br /></p>
+<p><a href="/myGame">It is available here</a></p>-->
+<h2>Game rules</h2>
+<div class="list">
+<p>You have 5 lifes at the beggining.</p>
+<p>Try to avoid clicking red circles as possible.</p>
+<aside>
+<div class="niceDiv">
+This means e.g. in level lower than 5 you have to click at least 55 green circles to level up.
+</div>
+</aside>
+<p>After reaching checkpoint you gain one life. Below level 5 at the start of the round you first have to click at least 10 green circles in a row to reach checkpoint. Next checkpoint is then only 9 green circles away. This goes down to 1 green circle. If you hit it, you level up.</p>
+<p>Above level 4 is the first checkpoint calculated from formula: <span class="formula">8 + (currentLevel/2)</span></p>
+<p>Above level 4 you do not have to click the circles, but drive mouse over those.</p>
+<p>If you hit green circle, you get score points calculated from this formula: <span class="formula">15 * currentLevel</span> If you did not hit it, then you have lost one life.</p>
+<p>If you hit the red one, your score is decreased by the appropriate value calculated from this formula: <span class="formula">15 * currentLevel * RedOnesClicked</span></p>
+<p>If you hit the red one and you have less score points than to be substracted, you lose one life and all left score points.</p>
+<p>Game ends when you have no lifes.</p>
+<h2>Tips & tricks</h2>
+<p>For the best game experience turn on fullscreen by pressing F11 (Google Chrome & Mozilla Firefox).</p>
+<aside>
+<div class="niceDiv">
+Maximal level speed is calulated from average human response time while using touchpad.
+</div>
+</aside>
+<p>Stay with your cursor in the center of the screen - this is the closest way to all directions.</p>
+<p>You might think circles are too fast to click them, but if you stay focused, you can hit them all!</p>
+<p>Take a while to relax after each 'death' - about 2 minutes is recommended to stay sharp!</p>
+<p>Above level 4 you stay with your mouse rather above than in the bottom - you never know if the next one is red circle!</p>
+<p>Do not freak out after hitting red circle for the first time in a round. This is okay, until you hit the red one for more than 3 times. You can loose really a lot of score by hitting more red circles in one round. See the formula above.</p>
+<p>To pause the game just press 'P' button or drive your mouse to the side of the screen where will appear pausable page division.</p>
+
+</div>
+<p></p>
+<h2><button id="goPlay">Touch to play</button></h2>
+<script>
+var a=document.getElementById("goPlay");
+a.addEventListener("click",function(){parent.location.pathname='/'});
+a.addEventListener("mouseover",function(){(Math.round(Math.random())==0)?this.innerHTML='Try it!':this.innerHTML='Real fun!'});
+a.addEventListener("mouseout",function(){this.innerHTML='Will you try me?'});
+</script>
+</body>

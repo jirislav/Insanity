@@ -1,0 +1,19 @@
+* {margin:0}
+body {background:#eee}
+span {font-weight:bold;font-size:3em;-webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none}
+button {font-weight:normal;font-size:2em;border-radius:.8em;padding:.3em;margin:.3em .5em}
+svg {position: absolute}
+circle {shape-rendering:optimizeSpeed}
+path {stoke:blue;stroke-width:3;fill=none}
+#score {position:absolute;top:0;right:0;margin-right:.5em;display:none}
+#level {position:absolute;top:0;display:none}
+#top {height: 3.8em;background:#e7e7e7;position:absolute;top:-4.4em;margin-left:0}
+#lifes {display:none}
+#endScreen {position:absolute;left:0;top:1em;color:#333}
+#endScreen div {position:relative}
+.lifes {margin-left:.5em}
+.countdown {font-size:8em;position:absolute;color:red}
+.bonus {position:absolute;margin-left:-3.5em;opacity:0}
+.green {color:green}
+.red {color:red}
+.restart {font-weight:bold}
