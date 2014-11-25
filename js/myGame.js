@@ -1,5 +1,5 @@
 //This game was created and developed by Jiří Kozlovský whose nickname is 'jirislav'.
-//Please do not copy until you get the owner's permission which you can ask for at mail@jkozlovsky.cz or https://www.facebook.com/messages/kodoczki
+//This code is licensed under MIT license. Feel free to fork & modify.
 
 /* TODO list
 
