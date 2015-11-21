@@ -28,4 +28,4 @@ Insanity
   
 ### Popular forks
 
-  There is no fork for now, so [**fork me now!**](https://github.com/jirislav/Insanity/fork)
+  There is no active fork for now, so [**don't hesitate to fork & become creative!**](https://github.com/jirislav/Insanity/fork)
