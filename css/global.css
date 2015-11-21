@@ -1,23 +1,147 @@
-* {margin:0}
-body {background:#eee;overflow:hidden}
-span {font-weight:bold;font-size:3em;-webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none}
-button {font-weight:normal;font-size:2em;border-radius:.8em;padding:.3em;margin:.3em .5em}
-svg {position: absolute}
-circle {shape-rendering:optimizeSpeed}
-path {stroke-width:3;fill:none}
-#score {position:absolute;top:0;right:0;margin-right:.5em;display:none}
-#level {position:absolute;top:0;display:none}
-#version {display: inline;position: absolute;right:.5em;top:4em;font-size:1em;color: rgba(50, 150, 50, 1)}
-#top {height: 3.8em;background:#e7e7e7;position:absolute;top:-4.4em;margin-left:0}
-#lifes {display:none}
-#endScreen {position:absolute;left:0;top:1em;color:#333}
-#endScreen div {position:relative}
-div#endScreen span {font-size: 2em}
-#progressBar {background:linear-gradient(to right, #008000 0%, #008000 0%, rgba(255, 255, 0, 0) 3.33333%) repeat scroll 0% 0% transparent;position:absolute;font-size:2em;border-radius:.8em;border:.08em solid #777}
-.flames {background: url(/img/flame3.gif);background-size: 100% 1em;background-repeat: repeat-x}
-.lifes {margin-left:.5em}
-.countdown {font-size:8em;position:absolute;color:red}
-.bonus {position:absolute;margin-left:-3.5em;opacity:0}
-.green {color:green}
-.red {color:red}
-.restart {font-weight:bold}
+/*
+	These Cascade Style Sheets were created by Jiří Kozlovský (93).
+		Please do not copy. If you would like to have similar CSS, contact me at mail@jkozlovsky.cz.
+	 */
+
+@import url(http://fonts.googleapis.com/css?family=PT+Serif|PT+Serif:b|PT+Serif:i|PT+Sans|PT+Sans:b&subset=latin-ext);
+
+html {
+	min-width: 1040px;
+} 
+body {
+	color: #444;
+	margin: 1em auto 4em auto;
+	font-family: "PT Serif", serif;
+	position: relative;
+	width: 960px;
+	background: #eee;
+}
+
+header, footer {
+	color: #777;
+	font-size: small;
+	font-family: "PT Sans", sans-serif;
+}
+
+footer {
+	margin-top: 8em;
+}
+
+top {
+	display: block;
+	float:right;
+	height:32px;
+	width:32px;
+	margin: 1em 5em 0 auto;
+}
+
+.top {
+	stroke: #333;
+	stroke-width: 3px;
+	stroke-linecap: round;
+	fill: none;
+}
+
+aside {
+	right: 0;
+	position: absolute;
+	font-size: small;
+	width: 200px;	
+}
+
+signature {
+	display: block;
+	float:right;
+	font-size: small;
+	margin: 3em;
+}
+
+
+/* 
+	H1 - H4 
+	*/
+h1, h2, h3, h4 {
+	color: #000;
+	font-family: "PT Sans", sans-serif;
+}
+
+h1, h2 {
+	text-rendering: optimizeLegibility;
+}
+
+h1 {
+	font-size: 64px;
+	font-weight: 300;
+	letter-spacing: -2px;
+	margin: .3em 0 .2em;
+}
+
+h2 {
+	margin-top: 2em;
+}
+
+h2 button {
+    font-size:inherit;
+    width: 8em;
+}
+
+
+/* 
+	Anchor text 
+	*/
+a {
+	color: steelblue;
+}
+
+a:not(:hover) {
+	text-decoration: none;
+}
+
+/*
+	Paragraph
+	 */
+p {
+	line-height: 1.5em;
+	width: 720px;
+	text-indent: 2.7em;
+}
+
+hr {
+	width: 720px;
+	float: left;
+}
+
+.niceDiv {
+	text-align: center;
+	padding: 15px;
+	border: 1px solid;
+	border-radius: 25px;
+	box-shadow: 10px 10px 6px #ccc;
+	background: #e8e8e8;
+}
+
+.formula {
+    border:.1em solid #ccc;
+    border-radius:.7em;
+    color:#c60;
+    background:#e0e0e0;
+    padding:.1em .5em;
+    white-space:nowrap;
+}
+
+.list p{
+    text-indent:-1.7em;
+    padding-left: 3em;
+}
+
+.list p::before {
+    border-radius: 50%;
+	width: .7em;
+	height: .7em;
+	background: #444;
+	display: inline-block;
+	content: no-open-quote;
+	margin-right: 1em;
+}
+
+#goPlay {margin-left:30%;font-size:1.5em}
