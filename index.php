@@ -1,3 +1,7 @@
 <?php
 
-if(isSet($_GET['debug']))include "myGame-deBug-touchpad.html";else include "myGame-touchpad.html";
+if (isset($_GET['play'])) {
+	include 'play.html';
+} else {
+	include 'menu.html';
+}
