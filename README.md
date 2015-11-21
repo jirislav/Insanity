@@ -15,7 +15,10 @@ Insanity
   * Touchpad version available
   * Low system requirements
   
+### Try it out!
+  You can try it out easily by cloning the repository & launching the play.html with your browser, or visit http://insanity.jkozlovsky.cz/?play.
 
+  To find out the rules of the game, visit /manual page (http://insanity.jkozlovsky.cz/manual/)
 
 ### Author's speech
 
