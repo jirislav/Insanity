@@ -4,9 +4,6 @@
 <link rel="stylesheet" type="text/css" href="/css/global.css" />
 <body>
 <h1>Insanity reference</h1>
-<!--
-<p>This reference is for the <b>touchpad version</b>, which is actually the most played version at all. If you are bored of such low difficulty, you can try out much harder version initially made for gaming mouse. In that version you gain more score points than in the touchpad one.<br /></p>
--->
 <h2>Game rules</h2>
 <div class="list">
 <p>You have 5 lifes at the beggining.</p>
@@ -36,16 +33,8 @@ Maximal level speed is calulated from average human response time while using to
 <p>Above level 4 you stay with your mouse rather above than in the bottom - you never know if the next one is red circle!</p>
 <p>Do not freak out after hitting red circle for the first time in a round. This is okay, until you hit the red one for more than 3 times. You can loose really a lot of score by hitting more red circles in one round. See the formula above.</p>
 
-<!--
-<p>To pause the game just press 'P' button or drive your mouse to the side of the screen where will appear pausable page division.</p>
--->
+<p><b>This is not done yet!</b>To pause the game just move your mouse out of the window. To resume, enter the window with your mouse again.</p>
 </div>
 <p></p>
-<h2><button id="goPlay">Touch to play</button></h2>
-<script>
-var a=document.getElementById("goPlay");
-a.addEventListener("click",function(){parent.location.pathname='/'});
-a.addEventListener("mouseover",function(){(Math.round(Math.random())==0)?this.innerHTML='Try it!':this.innerHTML='Real fun!'});
-a.addEventListener("mouseout",function(){this.innerHTML='Will you try me?'});
-</script>
+<h4><a href="/?play"><button id="goPlay">Try it out :)</button></a></h4>
 </body>
