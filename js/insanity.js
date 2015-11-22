@@ -20,7 +20,7 @@ var Insanity = function(){
 		return undefined;
 	}
 
-	// Other initializers
+	// Set global listeners now
 	document.body.onresize = function() {
 		Insanity.playBox.applyResize();
 	}
@@ -48,12 +48,12 @@ Insanity.prototype.done = function(state) {
 			break;
 		case this.states.countDownComplete:
 
-			Insanity.playBox.HUD.show();
+			Insanity.playBox.HUD.create();
 
 			break;
 		case this.states.HUDready:
 
-//			Insanity.playBox.createLevel(1);
+			Insanity.playBox.drawPlayground();
 
 			break;
 		case this.states.done:
@@ -91,6 +91,10 @@ Insanity.options = {
 
 	version : "1.3.0",
 
+	countDownFrom : 3,
+
+	levelTransitionDuration: 1400,
+
 	lifes : {
 		initialCount : 5,
 		maxCount : 10
@@ -114,7 +118,8 @@ Insanity.staticVars = {
 }
 
 Insanity.dynamicVars = {
-	level : 0
+	level : 1,
+	HUDinitialized : false
 }
 
 Insanity.helper = {
@@ -129,7 +134,10 @@ Insanity.helper = {
 
 Insanity.playBox = {
 
-	sizes : {},
+	sizes : {
+		"width" : undefined,
+		"height" : undefined
+	},
 
 	updateSizes : function () {
 		Insanity.playBox.sizes = Insanity.prototype.getScreenSize();
@@ -163,149 +171,11 @@ Insanity.playBox = {
 		Insanity.playBox.HUD.redraw();
 	},
 
-	createLevel : function(i) {
-		assignValues(level);
+	drawPlayground : function () {
 
 		return Insanity.prototype.updateState(Insanity.prototype.states.done);
 	},
 
-	HUD : {
-
-		show : function() {
-			var topDiv = body.append("div").attr("id","top")
-				.style(Insanity.playBox.HUD.getTopDivStyle());
-
-			Insanity.staticVars.HUD.topDivPtr = topDiv;
-
-			// Create lifes span
-			var lifesDiv = topDiv.append("div").attr("id","lifes")
-				.style('display', 'block');
-
-			lifesDiv.append("span").classed("lifes",true)
-				.style('display', 'inline')
-				.text(Insanity.options.lifes.initialCount);
-
-			lifesDiv.append("span")
-				.style('display', 'inline')
-				.text(" life(s)");
-
-			// Create level span
-			var levelSpanStyle = Insanity.playBox.HUD.getLevelSpanStyle();
-
-			levelSpanStyle.opacity = 0;
-
-			var levelSpan = topDiv.append("span").attr("id","level")
-				.text("Level 1")
-				.style(levelSpanStyle);
-
-			levelSpan
-				.transition()
-				.ease("exp").duration(Insanity.staticVars.HUD.durationToAppear)
-				.style("opacity", 1);
-
-			Insanity.staticVars.HUD.levelPtr = levelSpan;
-
-
-			// Create score span
-			var scoreSpan = topDiv.append("span").attr("id","score")
-				.style('display', 'inline')
-				.text(Insanity.options.scores.initialCount);
-
-			Insanity.staticVars.HUD.scorePtr = scoreSpan;
-
-			// Create version span
-			topDiv.append("span").attr("id","version")
-				.style('display', 'inline')
-				.text(Insanity.options.version);
-
-			// Drive the HUD into the observable area
-			topDiv.transition()
-				.duration(Insanity.staticVars.HUD.durationToAppear)
-				.style("top", "0px");
-
-			// Finally create the progress bar
-			Insanity.playBox.HUD.progressBar.create();
-
-			// Finally just update state as this is called synćhronously
-			return Insanity.prototype.updateState(Insanity.prototype.states.HUDready);
-		},
-
-		getTopDivStyle : function() {
-			return {
-				"width": Insanity.playBox.sizes.width + "px"
-			};
-		},
-
-		getLevelSpanStyle : function () {
-			return { 
-				'display': 'inline',
-				"left" : function() { return Insanity.helper.getHorizontalMiddle(this) }
-			};
-		},
-
-		hide : function() {
-			d3.select("div#top").style("width", Insanity.playBox.sizes.width + "px")
-				.transition().duration(HUDdurationDisappear)
-				.style("top", function() {return "-" + d3.select(this).style("height")})
-				.each("end", function() {
-					d3.select(this).remove()
-				});
-		},
-
-		redraw : function() {
-
-			// Update topDiv style
-			Insanity.staticVars.HUD.topDivPtr.style(Insanity.playBox.HUD.getTopDivStyle());
-
-			// Update levelSpan style
-			Insanity.staticVars.HUD.levelPtr.style(Insanity.playBox.HUD.getLevelSpanStyle());
-
-			// Update progressBar style
-			Insanity.playBox.HUD.progressBar.redraw();
-		},
-
-		progressBar : {
-			create : function() {
-
-				var style = Insanity.playBox.HUD.progressBar.getStyle();
-
-				// We want a nice, smooth transition :)
-				style.bottom = "-" + Insanity.playBox.sizes.twentiethHeight + "px";
-
-				var progressBar = body.append("div").attr("id", "progressBar")
-					.style(style);
-
-				progressBar.transition().duration(levelTransitionDuration).style("bottom","0px");
-
-				Insanity.staticVars.HUD.progressBarPtr = progressBar;
-
-			},
-
-			getStyle : function () {
-				return {
-					"height" : (.9 * Insanity.playBox.sizes.twentiethHeight) +"px",
-					"bottom" : "0px",
-					"width" : (.9 * Insanity.playBox.sizes.width) + "px",
-						"margin-bottom": (.1 * Insanity.playBox.sizes.twentiethHeight) + "px", // Why vim why ?? :D
-						"border-width": Insanity.playBox.sizes.twoHundredthHeight + "px",
-					"left" : function() { return Insanity.helper.getHorizontalMiddle(this) }
-				};
-			},
-
-			redraw : function() {
-				var style = Insanity.playBox.HUD.progressBar.getStyle();
-
-				Insanity.staticVars.HUD.progressBarPtr.style(style);
-			}
-		},
-
-		addLevel : function() {
-			// FIXME
-			niceLevelTransition(levelTransitionDuration);
-			a == null ? level++ : level += a;
-			d3.select("span#level").transition().duration(200).style("opacity",1==level?1:0);
-		}
-	},
 
 		// Transitions API
 	transitions : {
@@ -338,17 +208,196 @@ Insanity.playBox = {
 			}
 			];
 
-			Insanity.prototype.transitionsFactory.span(text, style, clazz, transitions);
+			Insanity.prototype.transitionsFactory.createTag('span', text, style, clazz, transitions);
 		}
 	}
 }
+
+Insanity.playBox.HUD = {
+
+	create : function() {
+		var topDiv = body.append("div").attr("id","top")
+			.style(Insanity.playBox.HUD.getTopDivStyle());
+
+		Insanity.staticVars.HUD.topDivPtr = topDiv;
+
+		// Create lifes span
+		var lifesDiv = topDiv.append("div").attr("id","lifes")
+			.style('display', 'block');
+
+		lifesDiv.append("span").classed("lifes",true)
+			.style('display', 'inline')
+			.text(Insanity.options.lifes.initialCount);
+
+		lifesDiv.append("span")
+			.style('display', 'inline')
+			.text(" life(s)");
+
+		// Create level span
+		var levelSpanStyle = Insanity.playBox.HUD.getLevelSpanStyle();
+
+		levelSpanStyle.opacity = 0;
+
+		var levelSpan = topDiv.append("span").attr("id","level")
+			.text("Level 1")
+			.style(levelSpanStyle);
+
+		levelSpan
+			.transition()
+			.ease("exp").duration(Insanity.staticVars.HUD.durationToAppear)
+			.style("opacity", 1);
+
+		Insanity.staticVars.HUD.levelPtr = levelSpan;
+
+
+		// Create score span
+		var scoreSpan = topDiv.append("span").attr("id","score")
+			.style('display', 'inline')
+			.text(Insanity.options.scores.initialCount);
+
+		Insanity.staticVars.HUD.scorePtr = scoreSpan;
+
+		// Create version span
+		topDiv.append("span").attr("id","version")
+			.style('display', 'inline')
+			.text(Insanity.options.version);
+
+		// Drive the HUD into the observable area
+		topDiv.transition()
+			.duration(Insanity.staticVars.HUD.durationToAppear)
+			.style("top", "0px");
+
+		// Finally create the progress bar
+		Insanity.playBox.HUD.progressBar.create();
+
+		Insanity.dynamicVars.HUDinitialized = true;
+		// Finally just update state as this is called synćhronously
+		return Insanity.prototype.updateState(Insanity.prototype.states.HUDready);
+	},
+
+	getTopDivStyle : function() {
+		return {
+			"width": Insanity.playBox.sizes.width + "px"
+		};
+	},
+
+	getLevelSpanStyle : function () {
+		return { 
+			'display': 'inline',
+			"left" : function() { return Insanity.helper.getHorizontalMiddle(this) }
+		};
+	},
+
+	hide : function() {
+		d3.select("div#top").style("width", Insanity.playBox.sizes.width + "px")
+			.transition().duration(HUDdurationDisappear)
+			.style("top", function() {return "-" + d3.select(this).style("height")})
+			.each("end", function() {
+				d3.select(this).remove()
+			});
+	},
+
+	redraw : function() {
+		if (Insanity.dynamicVars.HUDinitialized) {
+			// Update topDiv style
+			Insanity.staticVars.HUD.topDivPtr.style(Insanity.playBox.HUD.getTopDivStyle());
+
+			// Update levelSpan style
+			Insanity.staticVars.HUD.levelPtr.style(Insanity.playBox.HUD.getLevelSpanStyle());
+
+			// Update progressBar style
+			Insanity.playBox.HUD.progressBar.redraw();
+		}
+	},
+
+	progressBar : {
+		create : function() {
+
+			var style = Insanity.playBox.HUD.progressBar.getStyle();
+
+			// We want a nice, smooth transition :)
+			style.bottom = "-" + Insanity.playBox.sizes.twentiethHeight + "px";
+
+			var progressBar = body.append("div").attr("id", "progressBar")
+				.style(style);
+
+			progressBar.transition().duration(levelTransitionDuration).style("bottom","0px");
+
+			Insanity.staticVars.HUD.progressBarPtr = progressBar;
+
+		},
+
+		getStyle : function () {
+			return {
+				"height" : (.9 * Insanity.playBox.sizes.twentiethHeight) +"px",
+				"bottom" : "0px",
+				"width" : (.9 * Insanity.playBox.sizes.width) + "px",
+					"margin-bottom": (.1 * Insanity.playBox.sizes.twentiethHeight) + "px", // Why vim why ?? :D
+					"border-width": Insanity.playBox.sizes.twoHundredthHeight + "px",
+				"left" : function() { return Insanity.helper.getHorizontalMiddle(this) }
+			};
+		},
+
+		redraw : function() {
+			var style = Insanity.playBox.HUD.progressBar.getStyle();
+
+			Insanity.staticVars.HUD.progressBarPtr.style(style);
+		}
+	},
+
+	addLevel : function(count) {
+
+		if ( count == undefined ) {
+			Insanity.dynamicVars.level++;
+		} else { 
+			Insanity.dynamicVars.level += count;
+		}
+
+		var a = d3.select("span#level"),
+		b = parseInt(a.style("font-size")),
+			c = parseInt(a.style("width"));
+
+		var style = {
+			"opacity": 0,
+			"color" : "green",
+			"top" : hQuarter + "px",
+			"left" : function() { return Insanity.helper.getHorizontalMiddle(this) }
+		};
+
+		// Apply defined style
+		Insanity.staticVars.HUD.levelPtr.text("Level " + Insanity.dynamicVars.level)
+			.style(style);
+
+		var transitions = [
+		{
+			"duration" : .25 * Insanity.options.levelTransitionDuration,
+			"style" : {
+				"opacity" : 1
+			}
+		},
+		{
+			"duration" : .75 * Insanity.options.levelTransitionDuration,
+			"style" : {
+				"color" : "black",
+				"top" : "0px",
+				"left" : function() { return Insanity.helper.getHorizontalMiddle(this) }
+			}
+		}
+		];
+
+
+		// Apply those defines transitions
+		Insanity.prototype.transitionsFactory
+			.applyTransitions( Insanity.staticVars.HUD.levelPtr, transitions );
+	}
+};
 
 // Argument is set to current integer user see
 Insanity.prototype.handleCountDown = function(i) {
 
 	var color;
 	if (i === undefined) {
-		i = 2;
+		i = Insanity.options.countDownFrom;
 		color = "red";
 	} else if (typeof i === "string") {
 		color = "green";
@@ -358,9 +407,7 @@ Insanity.prototype.handleCountDown = function(i) {
 
 	Insanity.playBox.transitions.middleTop(i, 'countdown', color);
 
-	if (color === "green") {
-		Insanity.prototype.done(this.states.countDownComplete)
-	} else {
+	if (color !== "green") {
 
 		// If the next number is 0, we should show something like Start!
 		if (--i === 0) {
@@ -368,9 +415,17 @@ Insanity.prototype.handleCountDown = function(i) {
 		}
 
 		// Callback in one second
-		setTimeout(function(){
+		return setTimeout(function(){
 			Insanity.prototype.handleCountDown(i)
 		}, 1E3);
+	} else {
+		// Purge all countdown spans ..
+		setTimeout(function () {
+			d3.selectAll('span.countdown').remove();
+		}, 1E3);
+
+		// Now we are done here
+		return Insanity.prototype.done(this.states.countDownComplete)
 	}
 }
 
@@ -416,13 +471,15 @@ Insanity.prototype.endGame = function () {
 // { "duration" : 590, "style" : { top: "0px" } } ...
 Insanity.prototype.transitionsFactory = {
 
-	span : function(text, style, clazz, transitionDefs) {
-		var span = body.append("span").attr("class", clazz)
+	createTag : function(tag, text, style, clazz, transitionDefs) {
+		var element = body.append(tag).attr("class", clazz)
 			.text(text).style(style);
 
 		Insanity.prototype
 			.transitionsFactory
-			.applyTransitions( span, transitionDefs);
+			.applyTransitions( element, transitionDefs);
+
+		return element;
 
 	},
 
