@@ -16,7 +16,7 @@
 
 var Insanity = function(){
 
-	if (! (this instanceof Insanity) || this.checkIsAlreadyRunning()) {
+	if (! (this instanceof Insanity) || Insanity.helper.checkIsAlreadyRunning()) {
 		return undefined;
 	}
 
@@ -24,6 +24,8 @@ var Insanity = function(){
 	document.body.onresize = function() {
 		Insanity.playBox.applyResize();
 	}
+
+	Insanity.playBox.updateSizes();
 
 	// Now we are done here
 	this.done(this.states.birth);
@@ -42,8 +44,7 @@ Insanity.prototype.done = function(state) {
 		case this.states.birth:
 			isAsync = true;
 
-			Insanity.playBox.updateSizes();
-			Insanity.prototype.handleCountDown();
+			Insanity.playBox.HUD.processCountDown();
 			break;
 		case this.states.countDownComplete:
 
@@ -90,7 +91,6 @@ Insanity.prototype.states = {
 	"doneSendingClickables" : 4
 }
 
-// TODO: Merge  these options with staticVars ..
 Insanity.options = {
 
 	version : "1.3.0",
@@ -106,6 +106,9 @@ Insanity.options = {
 	scores : {
 		initialCount : 0
 	},
+	columns : {
+		initialCount : 3
+	},
 	HUD : {
 		durationToAppear : 1000,
 		durationToDisAppear : 250,
@@ -115,7 +118,7 @@ Insanity.options = {
 	}
 }
 
-// Helper variables ..
+// Helper relatively static variables ..
 Insanity.staticVars = {
 	HUD : {
 		// CSS styles we will soon fetch
@@ -126,10 +129,15 @@ Insanity.staticVars = {
 		progressBarPtr : undefined,
 		topDivPtr : undefined,
 		levelPtr : undefined,
-		scorePtr : undefined
+		scorePtr : undefined,
+
+		exists : false,
+		progressBarExists : false
 	},
 	playground : {
 		mainPtr : undefined,
+
+		exists : false
 	}
 }
 
@@ -147,7 +155,7 @@ Insanity.playBox = {
 	},
 
 	updateSizes : function () {
-		Insanity.playBox.sizes = Insanity.prototype.getScreenSize();
+		Insanity.playBox.sizes = Insanity.helper.getScreenSize();
 
 		// TODO: Think about having all those values handled by CSS ...
 		// h / 20
@@ -181,67 +189,91 @@ Insanity.playBox = {
 		//FIXME resize the playground & all the elements within it
 		//Insanity.playBox.playground.redraw();
 	},
+}
 
-	playground : {
-		create : function() {
+Insanity.playBox.playground = {
 
-			var svgWidth;
+	create : function() {
 
-			if (Insanity.playBox.sizes.width < Insanity.options.playground.maxRatio * Insanity.playBox.sizes.height ) {
-				svgWidth = Insanity.playBox.sizes.width;  
-			} else {
-				svgWidth = Math.round( Insanity.options.playground.maxRatio * Insanity.playBox.sizes.height );
-			}
+		if (Insanity.staticVars.playground.exists) {
+			console.error("Playground already exists, cannot create another !");
+			return false;
+		} else {
+			Insanity.staticVars.playground.exists = true;
+		}
 
-			// TODO find out why 1.2 times progBarH ??
-			var svgHeight = Insanity.playBox.sizes.height - Insanity.staticVars.HUD.topDivHeight - 1.2 * Insanity.staticVars.HUD.progressBarHeight;
+		var svgWidth;
 
-			columnsCount = level + 3;//+5
-			columns.recalculate(columnsCount);
+		if (Insanity.playBox.sizes.width < Insanity.options.playground.maxRatio * Insanity.playBox.sizes.height ) {
+			svgWidth = Insanity.playBox.sizes.width;  
+		} else {
+			svgWidth = Math.round( Insanity.options.playground.maxRatio * Insanity.playBox.sizes.height );
+		}
 
-			var mainSvgAttributes = {
-				"width" : svgWidth,
-				"height" : svgHeight,
-				"id" : "mainSvg_" + level
-			};
+		var svgHeight = Insanity.playBox.sizes.height - Insanity.staticVars.HUD.topDivHeight - Insanity.staticVars.HUD.progressBarHeight;
 
-			var mainSvgStyle = {
-				"left" : function() { return Insanity.helper.getHorizontalMiddle(this) },
-				"top" : Insanity.staticVars.HUD.topDivHeight + "px"
-			};
+		var mainSvgAttributes = {
+			"width" : svgWidth,
+			"height" : svgHeight,
+			"id" : "mainSvg_" + level
+		};
 
-			Insanity.staticVars.playground.mainPtr = body.append("svg:svg")
-				.attr(mainSvgAttributes)
-				.style(mainSvgStyle);
+		var mainSvgStyle = {
+			"left" : function() { return Insanity.helper.getHorizontalMiddle(this) },
+			"top" : Insanity.staticVars.HUD.topDivHeight + "px"
+		};
 
-			return Insanity.prototype.updateState(Insanity.prototype.states.playgroundCreated);
-		},
+		Insanity.staticVars.playground.mainPtr = body.append("svg:svg")
+			.attr(mainSvgAttributes)
+			.style(mainSvgStyle);
 
-		fadeOutCircles : function() {
-
-		},
-
-		redraw : function() {
-			// TODO ..
-		},
-
-		startSendingClickables : function() {
-			// TODO ...
-
-			Insanity.dynamicVars.started = Date.now();
-			return Insanity.prototype.updateState(Insanity.prototype.states.doneSendingClickables);
-		},
-
-		stopSendingClickables : function() {
-
-		},
+		return Insanity.prototype.updateState(Insanity.prototype.states.playgroundCreated);
 	},
 
-}
+	fadeOutCircles : function() {
+
+	},
+
+	redraw : function() {
+		// TODO ..
+	},
+
+	remove : function() {
+
+		if (!Insanity.staticVars.playground.exists) {
+			console.error("Playground does not exist!");
+			return false;
+		} else {
+			Insanity.staticVars.playground.exists = false;
+		}
+
+		//TODO: Implement playground removal ..
+		return true;
+	},
+
+	startSendingClickables : function() {
+		// TODO ...
+
+		Insanity.dynamicVars.started = Date.now();
+		return Insanity.prototype.updateState(Insanity.prototype.states.doneSendingClickables);
+	},
+
+	stopSendingClickables : function() {
+
+	},
+};
 
 Insanity.playBox.HUD = {
 
 	create : function() {
+
+		if (Insanity.staticVars.HUD.exists) {
+			console.error("HUD already exists, cannot create another !");
+			return false;
+		} else {
+			Insanity.staticVars.HUD.exists = true;
+		}
+
 		var topDiv = body.append("div").attr("id","top");
 
 		Insanity.staticVars.HUD.topDivPtr = topDiv;
@@ -293,7 +325,6 @@ Insanity.playBox.HUD = {
 		// Finally create the progress bar
 		Insanity.playBox.HUD.progressBar.create();
 
-		Insanity.dynamicVars.HUDinitialized = true;
 		// Finally just update state as this is called synćhronously
 		return Insanity.prototype.updateState(Insanity.prototype.states.HUDready);
 	},
@@ -304,13 +335,23 @@ Insanity.playBox.HUD = {
 		};
 	},
 
-	hide : function() {
-		d3.select("div#top").style("width", Insanity.playBox.sizes.width + "px")
-			.transition().duration(HUDdurationDisappear)
-			.style("top", function() {return "-" + d3.select(this).style("height")})
+	remove : function() {
+		if (!Insanity.staticVars.HUD.exists) {
+			console.error("HUD does not exist!");
+			return false;
+		} else {
+			Insanity.staticVars.HUD.exists = false;
+		}
+
+		Insanity.staticVars.HUD.topDivPtr
+			.transition().duration( Insanity.options.HUD.durationToDisAppear )
+			.style("top", "-" + Insanity.staticVars.HUD.topDivHeight + "px")
 			.each("end", function() {
-				d3.select(this).remove()
+				Insanity.staticVars.HUD.topDivPtr.remove();
 			});
+
+		Insanity.playBox.HUD.progressBar.remove();
+		return true;
 	},
 
 	redraw : function() {
@@ -320,14 +361,59 @@ Insanity.playBox.HUD = {
 		}
 	},
 
+	processCountDown : function(i) {
+
+		var color;
+		if (i === undefined) {
+			i = Insanity.options.countDownFrom;
+			color = "red";
+		} else if (typeof i === "string") {
+			color = "green";
+		} else {
+			color = "orange";
+		}
+
+		Insanity.helper.transitions.createCountDown(i, 'countdown', color);
+
+		if (color !== "green") {
+
+			// If the next number is 0, we should show something like Start!
+			if (--i === 0) {
+				i = "Go !!";
+			}
+
+			// Callback in one second
+			return setTimeout(function(){
+				Insanity.playBox.HUD.processCountDown(i)
+			}, 1E3);
+		} else {
+			// Purge all countdown spans ..
+			setTimeout(function () {
+				d3.selectAll('span.countdown').remove();
+			}, 1E3);
+
+			// Now we are done here
+			return Insanity.prototype.done(Insanity.prototype.states.countDownComplete)
+		}
+	},
+
 	progressBar : {
 		create : function() {
 
-			var progressBar = body.append("div").attr("id", "progressBar")
-				.style("bottom", "-20px");// We want a nice, smooth transition :)
+			if (Insanity.staticVars.HUD.progressBarExists) {
+				console.error("Progress bar already exists, cannot create another !");
+				return false;
+			} else {
+				Insanity.staticVars.HUD.progressBarExists = true;
+			}
 
-			// Get the CSS value
-			Insanity.staticVars.HUD.progressBarHeight = parseInt( progressBar.style('height') );
+			var progressBar = body.append("div").attr("id", "progressBar");
+
+			// Get the CSS height value (including the borders ..)
+			Insanity.staticVars.HUD.progressBarHeight = 1.2 * parseInt( progressBar.style('height') );
+
+			// We want a nice, smooth transition :)
+			progressBar.style("bottom", "-" + Insanity.staticVars.HUD.progressBarHeight + "px");
 
 			progressBar.transition()
 				.duration(levelTransitionDuration)
@@ -335,6 +421,7 @@ Insanity.playBox.HUD = {
 
 			Insanity.staticVars.HUD.progressBarPtr = progressBar;
 
+			return true;
 		},
 
 		getStyle : function () {
@@ -342,6 +429,25 @@ Insanity.playBox.HUD = {
 				"bottom" : "0px",
 			};
 		},
+
+		remove : function () {
+
+			if (!Insanity.staticVars.HUD.progressBarExists) {
+				console.error("Progress bar does not exist!");
+				return false;
+			} else {
+				Insanity.staticVars.HUD.progressBarExists = false;
+			}
+
+			Insanity.staticVars.HUD.progressBarPtr
+				.transition().duration( Insanity.options.HUD.durationToDisAppear )
+				.style("bottom", "-" + Insanity.staticVars.HUD.progressBarHeight + "px")
+				.each("end", function() {
+					Insanity.staticVars.HUD.progressBarPtr.remove();
+				});
+
+			return true;
+		}
 	},
 
 	addLevel : function(count) {
@@ -481,61 +587,21 @@ Insanity.helper = {
 				});
 			}
 		}
+	},
+	getScreenSize : function () {
+		var docElement = document.documentElement;
+
+		return {
+			"width": --docElement.clientWidth,
+			"height": --docElement.clientHeight
+		};
+	},
+	checkIsAlreadyRunning : function() {
+		return (document.InsanityRunning === undefined) ?
+			!(document.InsanityRunning = true) :
+			document.InsanityRunning;
 	}
 }
-
-
-// Argument is set to current integer user see
-Insanity.prototype.handleCountDown = function(i) {
-
-	var color;
-	if (i === undefined) {
-		i = Insanity.options.countDownFrom;
-		color = "red";
-	} else if (typeof i === "string") {
-		color = "green";
-	} else {
-		color = "orange";
-	}
-
-	Insanity.helper.transitions.createCountDown(i, 'countdown', color);
-
-	if (color !== "green") {
-
-		// If the next number is 0, we should show something like Start!
-		if (--i === 0) {
-			i = "Go !!";
-		}
-
-		// Callback in one second
-		return setTimeout(function(){
-			Insanity.prototype.handleCountDown(i)
-		}, 1E3);
-	} else {
-		// Purge all countdown spans ..
-		setTimeout(function () {
-			d3.selectAll('span.countdown').remove();
-		}, 1E3);
-
-		// Now we are done here
-		return Insanity.prototype.done(this.states.countDownComplete)
-	}
-}
-
-Insanity.prototype.checkIsAlreadyRunning = function() {
-	return (document.InsanityRunning === undefined) ?
-		!(document.InsanityRunning = true) :
-		document.InsanityRunning;
-}
-
-Insanity.prototype.getScreenSize = function() {
-	var docElement = document.documentElement;
-
-	return {
-		"width": --docElement.clientWidth,
-		"height": --docElement.clientHeight
-	};
-};
 
 // FIXME do some refatroing here ..
 Insanity.prototype.createEndGameScreen = function () {
