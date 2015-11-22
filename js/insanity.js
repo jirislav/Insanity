@@ -20,37 +20,112 @@ var Insanity = function(){
 		return undefined;
 	}
 
-	// Define version
-	this.version="1.3.0";
-
 	// Other initializers
-	document.body.onresize = Insanity.playBox.applyResize();
-
-	Insanity.playBox.updateSizes();
+	document.body.onresize = function() {
+		Insanity.playBox.applyResize();
+	}
 
 	// Now we are done here
 	this.done(this.states.birth);
 };
 
-var callAsync = function(closure) {
-	if (typeof closure === "function")
-		setTimeout(closure, 20);
+// Done method should ONLY be called from within the main Insanity() prototype, or after an async call completes
+// The argument state server only for asynchronous jobs when they finish
+Insanity.prototype.done = function(state) {
+
+	if (state !== undefined) // Can be undefined e.g. with synchronous callback
+		Insanity.prototype.updateState(state);
+
+	var isAsync = false;
+
+	switch (this.state) {
+		case this.states.birth:
+			isAsync = true;
+
+			Insanity.playBox.updateSizes();
+			Insanity.prototype.handleCountDown();
+
+			break;
+		case this.states.countDownComplete:
+
+			Insanity.playBox.HUD.show();
+
+			break;
+		case this.states.HUDready:
+
+//			Insanity.playBox.createLevel(1);
+
+			break;
+		case this.states.done:
+			return true;
+		default:
+			break;
+	}
+
+	if (isAsync)
+		return true;
+
+	if (this.previousState === this.state) {
+		console.log("State did not change - ending the logic now.\n Last state: " + this.state);
+		return false;
+	} else {
+		return this.done();
+	}
 }
 
-Insanity.prototype.checkIsAlreadyRunning = function() {
-	return (document.InsanityRunning === undefined) ?
-		!(document.InsanityRunning = true) :
-		document.InsanityRunning;
+Insanity.prototype.updateState = function(state) {
+	// Store last value just in case ..
+	this.previousState = this.state;
+
+	this.state = state;
 }
 
-Insanity.prototype.getScreenSize = function() {
-	var docElement = document.documentElement;
+Insanity.prototype.states = {
+	"birth" : 0,
+	"countDownComplete" : 1,
+	"HUDready" : 2,
+	"done" : 3
+}
 
-	return {
-		"width": --docElement.clientWidth,
-		"height": --docElement.clientHeight
-	};
-};
+Insanity.options = {
+
+	version : "1.3.0",
+
+	lifes : {
+		initialCount : 5,
+		maxCount : 10
+	},
+	scores : {
+		initialCount : 0
+	}
+}
+
+Insanity.staticVars = {
+	HUD : {
+		durationToAppear : 1000,
+
+		durationToDisAppear : 250,
+
+		progressBarPtr : undefined,
+		topDivPtr : undefined,
+		levelPtr : undefined,
+		scorePtr : undefined
+	}
+}
+
+Insanity.dynamicVars = {
+	level : 0
+}
+
+Insanity.helper = {
+	getHorizontalMiddle : function(obj) {
+
+		var objWidth = parseInt( d3.select(obj).style('width') );
+
+		return Math.round( Insanity.playBox.sizes.width - objWidth ) / 2 + "px";
+	}
+}
+
 
 Insanity.playBox = {
 
@@ -59,94 +134,185 @@ Insanity.playBox = {
 	updateSizes : function () {
 		Insanity.playBox.sizes = Insanity.prototype.getScreenSize();
 
-		Insanity.playBox.sizes.tenthHeight = Insanity.playBox.sizes.height / 10;
-		Insanity.playBox.sizes.quarterHeight = Insanity.playBox.sizes.height / 4;
+		// h / 20
+		Insanity.playBox.sizes.twentiethHeight = Insanity.playBox.sizes.height / 20;
 
-		Insanity.playBox.sizes.halfWidth = Insanity.playBox.sizes.width / 2;
-		Insanity.playBox.sizes.fifteenthWidth = Insanity.playBox.sizes.width / 15;
+		// h / 200
+		Insanity.playBox.sizes.twoHundredthHeight = Insanity.playBox.sizes.twentiethHeight / 10;
+
+		// h / 10
+		Insanity.playBox.sizes.tenthHeight = Insanity.playBox.sizes.twentiethHeight * 2;
+
+		// h / 4
+		Insanity.playBox.sizes.quarterHeight = Insanity.playBox.sizes.twentiethHeight * 5;
+
+		// h / 30
+		Insanity.playBox.sizes.thirtieth = Insanity.playBox.sizes.width / 30;
+
+		// h / 15
+		Insanity.playBox.sizes.fifteenthWidth = Insanity.playBox.sizes.thirtieth * 2;
+
+		// h / 2
+		Insanity.playBox.sizes.halfWidth = Insanity.playBox.sizes.thirtieth * 15;
 	},
 
 		// Window resize handler
 	applyResize : function() {
 		Insanity.playBox.updateSizes();
-		// TODO: Perform the resize ..
+
+		Insanity.playBox.HUD.redraw();
 	},
 
 	createLevel : function(i) {
-		levelUp(); // FIXME
+		assignValues(level);
+
 		return Insanity.prototype.updateState(Insanity.prototype.states.done);
 	},
 
-	showHUD : function() {
-		var divTop = appendDiv().attr("id","top");
-		var topMargin = Math.round(Insanity.playBox.sizes.tenthHeight);
+	HUD : {
 
-		var divLifes = divTop.append("div").attr("id","lifes");
+		show : function() {
+			var topDiv = body.append("div").attr("id","top")
+				.style(Insanity.playBox.HUD.getTopDivStyle());
 
-		divLifes.append("span").classed("lifes",true).text(5);
-		divLifes.append("span").text(" life(s)");
+			Insanity.staticVars.HUD.topDivPtr = topDiv;
 
-		divTop.append("span").attr("id","level").text("Level 1");
-		divTop.append("span").attr("id","score").text(0);
-		divTop.append("span").attr("id","version").text(version);
+			// Create lifes span
+			var lifesDiv = topDiv.append("div").attr("id","lifes")
+				.style('display', 'block');
 
-		divTop.transition().duration(HUDdurationAppear).style("top", "0px");
-		//AppendDiv end
-		d3.select("div#lifes").style("display", "block");
-		d3.selectAll("span:not(.countdown)").style("display", "inline")
-			.transition().duration(HUDdurationAppear);
+			lifesDiv.append("span").classed("lifes",true)
+				.style('display', 'inline')
+				.text(Insanity.options.lifes.initialCount);
 
-		// Create nice transition from the middle to above TODO: implement the custom transitions first
-		d3.select("span#level").style("left", function() {
-			return Math.round( Insanity.playBox.sizes.width - parseInt(d3.select(this).style("width")) )/2 + "px";
-		});
-		return Insanity.prototype.updateState(Insanity.prototype.states.HUDready);
+			lifesDiv.append("span")
+				.style('display', 'inline')
+				.text(" life(s)");
+
+			// Create level span
+			var levelSpanStyle = Insanity.playBox.HUD.getLevelSpanStyle();
+
+			levelSpanStyle.opacity = 0;
+
+			var levelSpan = topDiv.append("span").attr("id","level")
+				.text("Level 1")
+				.style(levelSpanStyle);
+
+			levelSpan
+				.transition()
+				.ease("exp").duration(Insanity.staticVars.HUD.durationToAppear)
+				.style("opacity", 1);
+
+			Insanity.staticVars.HUD.levelPtr = levelSpan;
+
+
+			// Create score span
+			var scoreSpan = topDiv.append("span").attr("id","score")
+				.style('display', 'inline')
+				.text(Insanity.options.scores.initialCount);
+
+			Insanity.staticVars.HUD.scorePtr = scoreSpan;
+
+			// Create version span
+			topDiv.append("span").attr("id","version")
+				.style('display', 'inline')
+				.text(Insanity.options.version);
+
+			// Drive the HUD into the observable area
+			topDiv.transition()
+				.duration(Insanity.staticVars.HUD.durationToAppear)
+				.style("top", "0px");
+
+			// Finally create the progress bar
+			Insanity.playBox.HUD.progressBar.create();
+
+			// Finally just update state as this is called synćhronously
+			return Insanity.prototype.updateState(Insanity.prototype.states.HUDready);
+		},
+
+		getTopDivStyle : function() {
+			return {
+				"width": Insanity.playBox.sizes.width + "px"
+			};
+		},
+
+		getLevelSpanStyle : function () {
+			return { 
+				'display': 'inline',
+				"left" : function() { return Insanity.helper.getHorizontalMiddle(this) }
+			};
+		},
+
+		hide : function() {
+			d3.select("div#top").style("width", Insanity.playBox.sizes.width + "px")
+				.transition().duration(HUDdurationDisappear)
+				.style("top", function() {return "-" + d3.select(this).style("height")})
+				.each("end", function() {
+					d3.select(this).remove()
+				});
+		},
+
+		redraw : function() {
+
+			// Update topDiv style
+			Insanity.staticVars.HUD.topDivPtr.style(Insanity.playBox.HUD.getTopDivStyle());
+
+			// Update levelSpan style
+			Insanity.staticVars.HUD.levelPtr.style(Insanity.playBox.HUD.getLevelSpanStyle());
+
+			// Update progressBar style
+			Insanity.playBox.HUD.progressBar.redraw();
+		},
+
+		progressBar : {
+			create : function() {
+
+				var style = Insanity.playBox.HUD.progressBar.getStyle();
+
+				// We want a nice, smooth transition :)
+				style.bottom = "-" + Insanity.playBox.sizes.twentiethHeight + "px";
+
+				var progressBar = body.append("div").attr("id", "progressBar")
+					.style(style);
+
+				progressBar.transition().duration(levelTransitionDuration).style("bottom","0px");
+
+				Insanity.staticVars.HUD.progressBarPtr = progressBar;
+
+			},
+
+			getStyle : function () {
+				return {
+					"height" : (.9 * Insanity.playBox.sizes.twentiethHeight) +"px",
+					"bottom" : "0px",
+					"width" : (.9 * Insanity.playBox.sizes.width) + "px",
+						"margin-bottom": (.1 * Insanity.playBox.sizes.twentiethHeight) + "px", // Why vim why ?? :D
+						"border-width": Insanity.playBox.sizes.twoHundredthHeight + "px",
+					"left" : function() { return Insanity.helper.getHorizontalMiddle(this) }
+				};
+			},
+
+			redraw : function() {
+				var style = Insanity.playBox.HUD.progressBar.getStyle();
+
+				Insanity.staticVars.HUD.progressBarPtr.style(style);
+			}
+		},
+
+		addLevel : function() {
+			// FIXME
+			niceLevelTransition(levelTransitionDuration);
+			a == null ? level++ : level += a;
+			d3.select("span#level").transition().duration(200).style("opacity",1==level?1:0);
+		}
 	},
-
-		// FIXME from HERE - copy&pasted problems ..
-	hideHUD : function() {
-		d3.select("div#top").style("width", Insanity.playBox.sizes.width + "px")
-			.transition().duration(HUDdurationDisappear)
-			.style("top", function() {return "-" + d3.select(this).style("height")})
-			.each("end", function() {
-				d3.select(this).remove()
-			});
-	},
-
-		// TODO Is this also considered to be part of play box ??
-	renderGUI : function () {
-
-		var divTop = appendDiv().attr("id","top"), topMargin = Math.round(h/10); //FIXME
-
-		divTop.style({
-			background:"transparent",
-			"margin-left":"2em"
-		});
-
-		divTop.append("button").classed("red", true).on("click",function() {deleteHighScores()}).text(delRecsText);
-		divTop.append("button").classed("green", true).on("click",function() {evadeAll();setTimeout(parent.location="manual", HUDdurationDisappear)}).text(manualButtonText);
-
-		divTop.append("button").classed({"green": true, "restart":true}).on("click",function() {disposeProgressBar();evadeAll();setTimeout(parent.location.reload(), HUDdurationDisappear)}).on("mouseover",function(){d3.select(this).text(resetButtonText[1])}).on("mouseout",function(){d3.select(this).text(resetButtonText[0])}).text(resetButtonText[0]);
-
-		d3.select("div#endScreen").style({
-			top: function() {return (divTopHeight+topMargin+parseInt(d3.select(this).style("top")))+"px"},
-			left: function() {return "-"+d3.select(this).style("width")}
-		}).transition().duration(HUDdurationAppear).style("left",Math.round(w/15)+"px");
-
-		divTop.transition().duration(HUDdurationAppear).style("top",(!0 == b?(topMargin):0)+"px");
-	},
-
-		//FIXME to HERE - copy&pasted problems
 
 		// Transitions API
 	transitions : {
 		middleTop : function (text, clazz, color) {
 			var style = {
 				color: color,
-				left: function() {
-					// Put the item in the horizontal middle
-					return (Insanity.playBox.sizes.width - parseInt(d3.select(this).style("width")) )/2 + "px";
-				},
+				"left" : function() { return Insanity.helper.getHorizontalMiddle(this) },
 				"top": Insanity.playBox.sizes.quarterHeight + "px",
 				"opacity": 0
 			};
@@ -176,6 +342,75 @@ Insanity.playBox = {
 		}
 	}
 }
+
+// Argument is set to current integer user see
+Insanity.prototype.handleCountDown = function(i) {
+
+	var color;
+	if (i === undefined) {
+		i = 2;
+		color = "red";
+	} else if (typeof i === "string") {
+		color = "green";
+	} else {
+		color = "orange";
+	}
+
+	Insanity.playBox.transitions.middleTop(i, 'countdown', color);
+
+	if (color === "green") {
+		Insanity.prototype.done(this.states.countDownComplete)
+	} else {
+
+		// If the next number is 0, we should show something like Start!
+		if (--i === 0) {
+			i = "Go !!";
+		}
+
+		// Callback in one second
+		setTimeout(function(){
+			Insanity.prototype.handleCountDown(i)
+		}, 1E3);
+	}
+}
+
+Insanity.prototype.checkIsAlreadyRunning = function() {
+	return (document.InsanityRunning === undefined) ?
+		!(document.InsanityRunning = true) :
+		document.InsanityRunning;
+}
+
+Insanity.prototype.getScreenSize = function() {
+	var docElement = document.documentElement;
+
+	return {
+		"width": --docElement.clientWidth,
+		"height": --docElement.clientHeight
+	};
+};
+
+// TODO Refactor me ...
+Insanity.prototype.endGame = function () {
+
+	var divTop = appendDiv().attr("id","top"), topMargin = Math.round(h/10); //FIXME
+
+	divTop.style({
+		background:"transparent",
+		"margin-left":"2em"
+	});
+
+	divTop.append("button").classed("red", true).on("click",function() {deleteHighScores()}).text(delRecsText);
+	divTop.append("button").classed("green", true).on("click",function() {evadeAll();setTimeout(parent.location="manual", HUDdurationDisappear)}).text(manualButtonText);
+
+	divTop.append("button").classed({"green": true, "restart":true}).on("click",function() {disposeProgressBar();evadeAll();setTimeout(parent.location.reload(), HUDdurationDisappear)}).on("mouseover",function(){d3.select(this).text(resetButtonText[1])}).on("mouseout",function(){d3.select(this).text(resetButtonText[0])}).text(resetButtonText[0]);
+
+	d3.select("div#endScreen").style({
+		top: function() {return (divTopHeight+topMargin+parseInt(d3.select(this).style("top")))+"px"},
+		left: function() {return "-"+d3.select(this).style("width")}
+	}).transition().duration(HUDdurationAppear).style("left",Math.round(w/15)+"px");
+
+	divTop.transition().duration(HUDdurationAppear).style("top",(!0 == b?(topMargin):0)+"px");
+};
 
 // transitionDefs must be array of Object like this one:
 // { "duration" : 590, "style" : { top: "0px" } } ...
@@ -223,88 +458,6 @@ Insanity.prototype.transitionsFactory = {
 						);
 			});
 		}
-	}
-}
-
-Insanity.prototype.states = {
-	"birth" : 0,
-	"countDownComplete" : 1,
-	"HUDready" : 2,
-	"done" : 3
-}
-
-// Argument is set to current integer user see
-Insanity.prototype.handleCountDown = function(i) {
-
-	var color;
-	if (i === undefined) {
-		i = 2;
-		color = "red";
-	} else if (typeof i === "string") {
-		color = "green";
-	} else {
-		color = "orange";
-	}
-
-	Insanity.playBox.transitions.middleTop(i, 'countdown', color);
-
-	if (color === "green") {
-		Insanity.prototype.done(this.states.countDownComplete)
-	} else {
-
-		// If the next number is 0, we should show something like Start!
-		if (--i === 0) {
-			i = "Go !!";
-		}
-
-		// Callback in one second
-		setTimeout(function(){
-			Insanity.prototype.handleCountDown(i)
-		}, 1E3);
-	}
-}
-
-Insanity.prototype.updateState = function(state) {
-	// Store last value just in case ..
-	this.previousState = this.state;
-
-	this.state = state;
-}
-
-// Done method should ONLY be called from within the main Insanity() prototype, or after an async call completes
-// The argument state server only for asynchronous jobs when they finish
-Insanity.prototype.done = function(state) {
-
-	if (state !== undefined) // Can be undefined e.g. with synchronous callback
-		Insanity.prototype.updateState(state);
-
-	var isAsync = false;
-
-	switch (this.state) {
-		case this.states.birth:
-			isAsync = true;
-			Insanity.prototype.handleCountDown();
-			break;
-		case this.states.countDownComplete:
-			Insanity.playBox.showHUD();
-			break;
-		case this.states.HUDready:
-			Insanity.playBox.createLevel(1);
-			break;
-		case this.states.done:
-			return true;
-		default:
-			break;
-	}
-
-	if (isAsync)
-		return true;
-
-	if (this.previousState === this.state) {
-		console.log("State did not change - ending the logic now.\n Last state: " + this.state);
-		return false;
-	} else {
-		return this.done();
 	}
 }
 
@@ -638,6 +791,11 @@ var version="1.2.2 - debug",svg,radius,downSight,started,columns,ratio,columnsCo
 	    "columns" == a && debugColumns();
 	    !1 == a ? (lifes= 5,speed=1) : (lifes= 5000,speed=b);
     };
+
+var callAsync = function(closure) {
+	if (typeof closure === "function")
+		setTimeout(closure, 10); //Wait 10 ms :)
+}
 
 var I = new Insanity();
 //countDown(4);
