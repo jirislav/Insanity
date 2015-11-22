@@ -355,7 +355,7 @@ Insanity.playBox.HUD = {
 	},
 
 	redraw : function() {
-		if (Insanity.dynamicVars.HUDinitialized) {
+		if (Insanity.staticVars.HUD.exists) {
 			// Update levelSpan style
 			Insanity.staticVars.HUD.levelPtr.style(Insanity.playBox.HUD.getLevelSpanStyle());
 		}
