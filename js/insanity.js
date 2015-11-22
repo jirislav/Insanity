@@ -32,6 +32,11 @@ var Insanity = function(){
 	this.done(this.states.birth);
 };
 
+var callAsync = function(closure) {
+	if (typeof closure === "function")
+		setTimeout(closure, 20);
+}
+
 Insanity.prototype.checkIsAlreadyRunning = function() {
 	return (document.InsanityRunning === undefined) ?
 		!(document.InsanityRunning = true) :
@@ -66,6 +71,12 @@ Insanity.playBox = {
 		Insanity.playBox.updateSizes();
 		// TODO: Perform the resize ..
 	},
+
+	createLevel : function(i) {
+		levelUp(); // FIXME
+		return Insanity.prototype.updateState(Insanity.prototype.states.done);
+	},
+
 	showHUD : function() {
 		var divTop = appendDiv().attr("id","top");
 		var topMargin = Math.round(Insanity.playBox.sizes.tenthHeight);
@@ -81,29 +92,25 @@ Insanity.playBox = {
 
 		divTop.transition().duration(HUDdurationAppear).style("top", "0px");
 		//AppendDiv end
-
 		d3.select("div#lifes").style("display", "block");
-		d3.selectAll("span").style("display", "inline")
+		d3.selectAll("span:not(.countdown)").style("display", "inline")
 			.transition().duration(HUDdurationAppear);
 
 		// Create nice transition from the middle to above TODO: implement the custom transitions first
 		d3.select("span#level").style("left", function() {
-		       	return Math.round( Insanity.playBox.sizes.width - parseInt(d3.select(this).style("width")) )/2 + "px";
+			return Math.round( Insanity.playBox.sizes.width - parseInt(d3.select(this).style("width")) )/2 + "px";
 		});
-
 		return Insanity.prototype.updateState(Insanity.prototype.states.HUDready);
 	},
 
 		// FIXME from HERE - copy&pasted problems ..
 	hideHUD : function() {
-		d3.select("div#top").style("width", w+"px").transition().duration(HUDdurationDisappear)
-			.style("top", function() {return "-"+d3.select(this).style("height")})
-			.each("end", function() {d3.select(this).remove()})
-	},
-
-	createLevel : function(i) {
-		levelUp(); // FIXME
-		return Insanity.prototype.updateState(Insanity.prototype.states.done);
+		d3.select("div#top").style("width", Insanity.playBox.sizes.width + "px")
+			.transition().duration(HUDdurationDisappear)
+			.style("top", function() {return "-" + d3.select(this).style("height")})
+			.each("end", function() {
+				d3.select(this).remove()
+			});
 	},
 
 		// TODO Is this also considered to be part of play box ??
@@ -178,22 +185,44 @@ Insanity.prototype.transitionsFactory = {
 		var span = body.append("span").attr("class", clazz)
 			.text(text).style(style);
 
-		transitionDefs.forEach(function (transitionDef) {
+		Insanity.prototype
+			.transitionsFactory
+			.applyTransitions( span, transitionDefs);
 
-			// Default duration
-			if (transitionDef.duration === undefined)
-				transitionDef.duration = 500;
+	},
 
-			// Default style
-			if (transitionDef.style === undefined)
-				transitionDef.style = { color: "red" , opacity: 1}
+	applyTransitions : function(d3selector, transitionDefs, key, lastKey) {
 
+		if (key === undefined) {
+			var keys = Object.keys(transitionDefs);
 
-			transitionDef.style.opacity = 1;
+			key = parseInt(keys[0]);
+			lastKey = parseInt(keys.pop());
 
-			span = span.transition().duration(transitionDef.duration).style(transitionDef.style);
-		});
-		span.remove();
+		}
+
+		var transitionDef = transitionDefs[key];
+
+		// Default duration
+		if (transitionDef.duration === undefined)
+			transitionDef.duration = 500;
+
+		// Default style
+		if (transitionDef.style === undefined)
+			transitionDef.style = { color: "red" , opacity: 1}
+
+		var transition = d3selector.transition()
+			.duration(transitionDef.duration)
+			.style(transitionDef.style);
+
+		if ( key !== lastKey ) {
+			transition = transition.each("end", function() {
+				// Do the callback
+				Insanity.prototype.transitionsFactory.applyTransitions(
+						d3.select(this), transitionDefs, ++key, lastKey
+						);
+			});
+		}
 	}
 }
 
@@ -209,7 +238,7 @@ Insanity.prototype.handleCountDown = function(i) {
 
 	var color;
 	if (i === undefined) {
-		i = 3;
+		i = 2;
 		color = "red";
 	} else if (typeof i === "string") {
 		color = "green";
@@ -220,18 +249,19 @@ Insanity.prototype.handleCountDown = function(i) {
 	Insanity.playBox.transitions.middleTop(i, 'countdown', color);
 
 	if (color === "green") {
-		return Insanity.prototype.done(this.states.countDownComplete);
-	}
+		Insanity.prototype.done(this.states.countDownComplete)
+	} else {
 
-	// If the next number is 0, we should show something like Start!
-	if (--i === 0) {
-		i = "Go !!";
-	}
+		// If the next number is 0, we should show something like Start!
+		if (--i === 0) {
+			i = "Go !!";
+		}
 
-	// Callback in one second
-	return setTimeout(function(){
-		Insanity.prototype.handleCountDown(i)
-	}, 1E3);
+		// Callback in one second
+		setTimeout(function(){
+			Insanity.prototype.handleCountDown(i)
+		}, 1E3);
+	}
 }
 
 Insanity.prototype.updateState = function(state) {
@@ -242,9 +272,10 @@ Insanity.prototype.updateState = function(state) {
 }
 
 // Done method should ONLY be called from within the main Insanity() prototype, or after an async call completes
+// The argument state server only for asynchronous jobs when they finish
 Insanity.prototype.done = function(state) {
 
-	if (state !== undefined)
+	if (state !== undefined) // Can be undefined e.g. with synchronous callback
 		Insanity.prototype.updateState(state);
 
 	var isAsync = false;
