@@ -143,7 +143,6 @@ Insanity.staticVars = {
 
 Insanity.dynamicVars = {
 	level : 1,
-	HUDinitialized : false,
 	started : 0
 }
 
@@ -187,7 +186,7 @@ Insanity.playBox = {
 		Insanity.playBox.HUD.redraw();
 
 		//FIXME resize the playground & all the elements within it
-		//Insanity.playBox.playground.redraw();
+		Insanity.playBox.playground.redraw();
 	},
 }
 
@@ -202,32 +201,44 @@ Insanity.playBox.playground = {
 			Insanity.staticVars.playground.exists = true;
 		}
 
+		var definition = Insanity.playBox.playground.getSVGdefinition();
+
+		Insanity.staticVars.playground.mainPtr = body.append("svg:svg")
+			.attr(definition.attr)
+			.style(definition.style);
+
+		return Insanity.prototype.updateState(Insanity.prototype.states.playgroundCreated);
+	},
+
+	getSVGdefinition : function() {
+
 		var svgWidth;
 
+		// Apply maxRatio if needed
 		if (Insanity.playBox.sizes.width < Insanity.options.playground.maxRatio * Insanity.playBox.sizes.height ) {
 			svgWidth = Insanity.playBox.sizes.width;  
 		} else {
 			svgWidth = Math.round( Insanity.options.playground.maxRatio * Insanity.playBox.sizes.height );
 		}
 
+		// The height is about to be Window height - InfoPanel height - progressBar height
+		// which equals all the other space left on the screen until resize
 		var svgHeight = Insanity.playBox.sizes.height - Insanity.staticVars.HUD.topDivHeight - Insanity.staticVars.HUD.progressBarHeight;
 
-		var mainSvgAttributes = {
-			"width" : svgWidth,
-			"height" : svgHeight,
-			"id" : "mainSvg_" + level
-		};
-
-		var mainSvgStyle = {
+		var style =  {
 			"left" : function() { return Insanity.helper.getHorizontalMiddle(this) },
 			"top" : Insanity.staticVars.HUD.topDivHeight + "px"
 		};
 
-		Insanity.staticVars.playground.mainPtr = body.append("svg:svg")
-			.attr(mainSvgAttributes)
-			.style(mainSvgStyle);
+		var attr = {
+			"width" : svgWidth,
+			"height" : svgHeight,
+		};
 
-		return Insanity.prototype.updateState(Insanity.prototype.states.playgroundCreated);
+		return {
+			"style" : style,
+			"attr" : attr
+		};
 	},
 
 	fadeOutCircles : function() {
@@ -235,7 +246,13 @@ Insanity.playBox.playground = {
 	},
 
 	redraw : function() {
-		// TODO ..
+		if (Insanity.staticVars.playground.exists) {
+			var definition = Insanity.playBox.playground.getSVGdefinition();
+
+			Insanity.staticVars.playground.mainPtr
+				.attr(definition.attr)
+				.style(definition.style);
+		}
 	},
 
 	remove : function() {
@@ -509,6 +526,8 @@ Insanity.helper = {
 		return Math.round( Insanity.playBox.sizes.width - objWidth ) / 2 + "px";
 	},
 
+	// transitionDefs must be array of Object like this one:
+	// { "duration" : 590, "style" : { top: "0px" } } ...
 	transitions : {
 		createCountDown : function (text, clazz, color) {
 			var style = {
@@ -675,11 +694,12 @@ Insanity.prototype.createEndGameScreen = function () {
 		.style("top", topMargin + "px");
 };
 
-// transitionDefs must be array of Object like this one:
-// { "duration" : 590, "style" : { top: "0px" } } ...
-Insanity.prototype.transitionsFactory = {
-
-}
+//
+// 
+// HERE STARTS THE OLD VERSION BEING REFACTORED ABOVE ...
+//
+//
+//
 
 var version="1.2.2 - debug",svg,radius,downSight,started,columns,ratio,columnsCount,redsInRound,speed,circlesCountAtOnce,optimizedRenderingSpeed,progressAppearDuration,svgWidth,svgHeight,accelerator,bonusGap,summedGaps,circleRoundID,greensInRow,nbsPoints,oldSpeed,scoreBoard,lifesBoard,progressBarHeight,levelProgress,rgRatio,tenLifesBonus,
     w = document.documentElement.clientWidth-1,
