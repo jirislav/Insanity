@@ -16,7 +16,7 @@
 
 var Insanity = function(){
 
-	if (this.checkIsAlreadyRunning()) {
+	if (! (this instanceof Insanity) || this.checkIsAlreadyRunning()) {
 		return undefined;
 	}
 
@@ -44,19 +44,21 @@ Insanity.prototype.done = function(state) {
 
 			Insanity.playBox.updateSizes();
 			Insanity.prototype.handleCountDown();
-
 			break;
 		case this.states.countDownComplete:
 
 			Insanity.playBox.HUD.create();
-
 			break;
 		case this.states.HUDready:
 
-			Insanity.playBox.drawPlayground();
-
+			Insanity.playBox.playground.create();
 			break;
-		case this.states.done:
+		case this.states.playgroundCreated:
+
+			Insanity.playBox.playground.startSendingClickables();
+			break;
+		case this.states.doneSendingClickables:
+			// Ending the game construction ..
 			return true;
 		default:
 			break;
@@ -84,9 +86,11 @@ Insanity.prototype.states = {
 	"birth" : 0,
 	"countDownComplete" : 1,
 	"HUDready" : 2,
-	"done" : 3
+	"playgroundCreated" : 3,
+	"doneSendingClickables" : 4
 }
 
+// TODO: Merge  these options with staticVars ..
 Insanity.options = {
 
 	version : "1.3.0",
@@ -101,25 +105,39 @@ Insanity.options = {
 	},
 	scores : {
 		initialCount : 0
+	},
+	HUD : {
+		durationToAppear : 1000,
+		durationToDisAppear : 250,
+	},
+	playground : {
+		maxRatio : 13E-1 // Equals 1.3
+
 	}
 }
 
+// Helper variables ..
 Insanity.staticVars = {
 	HUD : {
-		durationToAppear : 1000,
+		// CSS styles we will soon fetch
+		progressBarHeight : undefined, 
+		topDivHeight : undefined,
 
-		durationToDisAppear : 250,
-
+			// Pointers of various elemnents to prevent d3.select() as it's really slow
 		progressBarPtr : undefined,
 		topDivPtr : undefined,
 		levelPtr : undefined,
 		scorePtr : undefined
+	},
+	playground : {
+		mainPtr : undefined,
 	}
 }
 
 Insanity.dynamicVars = {
 	level : 1,
-	HUDinitialized : false
+	HUDinitialized : false,
+	started : 0
 }
 
 Insanity.helper = {
@@ -142,6 +160,7 @@ Insanity.playBox = {
 	updateSizes : function () {
 		Insanity.playBox.sizes = Insanity.prototype.getScreenSize();
 
+		// TODO: Think about having all those values handled by CSS ...
 		// h / 20
 		Insanity.playBox.sizes.twentiethHeight = Insanity.playBox.sizes.height / 20;
 
@@ -169,15 +188,68 @@ Insanity.playBox = {
 		Insanity.playBox.updateSizes();
 
 		Insanity.playBox.HUD.redraw();
+
+		//FIXME resize the playground & all the elements within it
+		//Insanity.playBox.playground.redraw();
 	},
 
-	drawPlayground : function () {
-		// FIXME implement me ..
-		return Insanity.prototype.updateState(Insanity.prototype.states.done);
+	playground : {
+		create : function() {
+
+			var svgWidth;
+
+			if (Insanity.playBox.sizes.width < Insanity.options.playground.maxRatio * Insanity.playBox.sizes.height ) {
+				svgWidth = Insanity.playBox.sizes.width;  
+			} else {
+				svgWidth = Math.round( Insanity.options.playground.maxRatio * Insanity.playBox.sizes.height );
+			}
+
+			// TODO find out why 1.2 times progBarH ??
+			var svgHeight = Insanity.playBox.sizes.height - Insanity.staticVars.HUD.topDivHeight - 1.2 * Insanity.staticVars.HUD.progressBarHeight;
+
+			columnsCount = level + 3;//+5
+			columns.recalculate(columnsCount);
+
+			var mainSvgAttributes = {
+				"width" : svgWidth,
+				"height" : svgHeight,
+				"id" : "mainSvg_" + level
+			};
+
+			var mainSvgStyle = {
+				"left" : function() { return Insanity.helper.getHorizontalMiddle(this) },
+				"top" : Insanity.staticVars.HUD.topDivHeight + "px"
+			};
+
+			Insanity.staticVars.playground.mainPtr = body.append("svg:svg")
+				.attr(mainSvgAttributes)
+				.style(mainSvgStyle);
+
+			return Insanity.prototype.updateState(Insanity.prototype.states.playgroundCreated);
+		},
+
+		fadeOutCircles : function() {
+
+		},
+
+		redraw : function() {
+			// TODO ..
+		},
+
+		startSendingClickables : function() {
+			// TODO ...
+
+			Insanity.dynamicVars.started = Date.now();
+			return Insanity.prototype.updateState(Insanity.prototype.states.doneSendingClickables);
+		},
+
+		stopSendingClickables : function() {
+
+		},
 	},
 
 
-		// Transitions API
+		// What the hack ?? :D
 	transitions : {
 		middleTop : function (text, clazz, color) {
 			var style = {
@@ -220,6 +292,9 @@ Insanity.playBox.HUD = {
 
 		Insanity.staticVars.HUD.topDivPtr = topDiv;
 
+		// Get the CSS value
+		Insanity.staticVars.HUD.topDivHeight = parseInt( topDiv.style('height') );
+
 		// Create lifes span
 		var lifesDiv = topDiv.append("div").attr("id","lifes");
 
@@ -240,7 +315,7 @@ Insanity.playBox.HUD = {
 
 		levelSpan
 			.transition()
-			.ease("exp").duration(Insanity.staticVars.HUD.durationToAppear)
+			.ease("exp").duration(Insanity.options.HUD.durationToAppear)
 			.style("opacity", 1);
 
 		Insanity.staticVars.HUD.levelPtr = levelSpan;
@@ -258,7 +333,7 @@ Insanity.playBox.HUD = {
 
 		// Drive the HUD into the observable area
 		topDiv.transition()
-			.duration(Insanity.staticVars.HUD.durationToAppear)
+			.duration(Insanity.options.HUD.durationToAppear)
 			.style("top", "0px");
 
 		// Finally create the progress bar
@@ -296,6 +371,9 @@ Insanity.playBox.HUD = {
 
 			var progressBar = body.append("div").attr("id", "progressBar")
 				.style("bottom", "-20px");// We want a nice, smooth transition :)
+
+			// Get the CSS value
+			Insanity.staticVars.HUD.progressBarHeight = parseInt( progressBar.style('height') );
 
 			progressBar.transition()
 				.duration(levelTransitionDuration)
@@ -415,27 +493,76 @@ Insanity.prototype.getScreenSize = function() {
 	};
 };
 
-// TODO Refactor me ...
-Insanity.prototype.endGame = function () {
+// FIXME do some refatroing here ..
+Insanity.prototype.createEndGameScreen = function () {
 
-	var divTop = appendDiv().attr("id","top"), topMargin = Math.round(h/10); //FIXME
+	var endScreen = appendDiv("endScreen");
+       	var b = getRec();
+        var e = ( 1e-3 * ( Date.now() - Insanity.dynamicVars.started ));
+       
+	var r = endScreen.append("div").classed("record",true).append("span");
+
+	b < score ? (saveRec(),r.text("New record achieved!\n")) : r.text("Your best: "+b);
+
+	// Append score reached
+	endScreen.append("div").classed("scoreReached", true)
+		.append("span").text("You scored: "+score);
+
+	// Append reached level
+	endScreen.append("div").classed("levelReached", true)
+		.append("span").text("Level reached: "+level);
+
+	// Append elapsed time
+	var elapsedTime = "Time elapsed: "+(60 < e ? (Math.round(e/60)+" min(s) "):"")+
+		(Math.round(e%60)+" sec(s)");
+
+	endScreen.append("div").classed("elapsed", true)
+		.append("span").text(elapsedTime);
+
+	var divTop = body.append('div').attr("id","top");
+	var divTopHeight = parseInt( divTop.style('height') );
+	var topMargin = Math.round(h/10); //FIXME
 
 	divTop.style({
 		background:"transparent",
 		"margin-left":"2em"
 	});
 
-	divTop.append("button").classed("red", true).on("click",function() {deleteHighScores()}).text(delRecsText);
-	divTop.append("button").classed("green", true).on("click",function() {evadeAll();setTimeout(parent.location="manual", HUDdurationDisappear)}).text(manualButtonText);
+	divTop.append("button").classed("red", true)
+		.on("click", function() {
+			deleteHighScores()
+		}).text(delRecsText);
 
-	divTop.append("button").classed({"green": true, "restart":true}).on("click",function() {disposeProgressBar();evadeAll();setTimeout(parent.location.reload(), HUDdurationDisappear)}).on("mouseover",function(){d3.select(this).text(resetButtonText[1])}).on("mouseout",function(){d3.select(this).text(resetButtonText[0])}).text(resetButtonText[0]);
+	divTop.append("button").classed("green", true)
+		.on("click", function() {
+			evadeAll();
+			setTimeout(parent.location="manual", HUDdurationDisappear)
+		}).text(manualButtonText);
 
-	d3.select("div#endScreen").style({
-		top: function() {return (divTopHeight+topMargin+parseInt(d3.select(this).style("top")))+"px"},
-		left: function() {return "-"+d3.select(this).style("width")}
-	}).transition().duration(HUDdurationAppear).style("left",Math.round(w/15)+"px");
+	divTop.append("button").classed({"green": true, "restart":true})
+		.on("click", function() {
+			disposeProgressBar();
+			evadeAll();
+			setTimeout(parent.location.reload(), HUDdurationDisappear)
+		}).on("mouseover", function(){ 
+			d3.select(this).text(resetButtonText[1])
+		}).on("mouseout", function(){
+			d3.select(this).text(resetButtonText[0])
+		}).text(resetButtonText[0]);
 
-	divTop.transition().duration(HUDdurationAppear).style("top",(!0 == b?(topMargin):0)+"px");
+	d3.select("div#endScreen")
+		.style({
+			"top" : function() {
+				return ( divTopHeight + topMargin + parseInt(d3.select(this).style("top")))+"px"
+			},
+			"left" : function() {
+				return "-" + d3.select(this).style("width")
+			}
+		}).transition().duration(HUDdurationAppear)
+	.style("left", Math.round( w / 15 ) + "px");
+
+	divTop.transition().duration(HUDdurationAppear)
+		.style("top", topMargin + "px");
 };
 
 // transitionDefs must be array of Object like this one:
