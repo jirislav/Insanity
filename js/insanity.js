@@ -14,6 +14,269 @@
 
    end of TODO */
 
+var Insanity = function(){
+
+	if (this.checkIsAlreadyRunning()) {
+		return undefined;
+	}
+
+	// Define version
+	this.version="1.3.0";
+
+	// Other initializers
+	document.body.onresize = Insanity.playBox.applyResize();
+
+	Insanity.playBox.updateSizes();
+
+	// Now we are done here
+	this.done(this.states.birth);
+};
+
+Insanity.prototype.checkIsAlreadyRunning = function() {
+	return (document.InsanityRunning === undefined) ?
+		!(document.InsanityRunning = true) :
+		document.InsanityRunning;
+}
+
+Insanity.prototype.getScreenSize = function() {
+	var docElement = document.documentElement;
+
+	return {
+		"width": --docElement.clientWidth,
+		"height": --docElement.clientHeight
+	};
+};
+
+Insanity.playBox = {
+
+	sizes : {},
+
+	updateSizes : function () {
+		Insanity.playBox.sizes = Insanity.prototype.getScreenSize();
+
+		Insanity.playBox.sizes.tenthHeight = Insanity.playBox.sizes.height / 10;
+		Insanity.playBox.sizes.quarterHeight = Insanity.playBox.sizes.height / 4;
+
+		Insanity.playBox.sizes.halfWidth = Insanity.playBox.sizes.width / 2;
+		Insanity.playBox.sizes.fifteenthWidth = Insanity.playBox.sizes.width / 15;
+	},
+
+		// Window resize handler
+	applyResize : function() {
+		Insanity.playBox.updateSizes();
+		// TODO: Perform the resize ..
+	},
+	showHUD : function() {
+		var divTop = appendDiv().attr("id","top");
+		var topMargin = Math.round(Insanity.playBox.sizes.tenthHeight);
+
+		var divLifes = divTop.append("div").attr("id","lifes");
+
+		divLifes.append("span").classed("lifes",true).text(5);
+		divLifes.append("span").text(" life(s)");
+
+		divTop.append("span").attr("id","level").text("Level 1");
+		divTop.append("span").attr("id","score").text(0);
+		divTop.append("span").attr("id","version").text(version);
+
+		divTop.transition().duration(HUDdurationAppear).style("top", "0px");
+		//AppendDiv end
+
+		d3.select("div#lifes").style("display", "block");
+		d3.selectAll("span").style("display", "inline")
+			.transition().duration(HUDdurationAppear);
+
+		// Create nice transition from the middle to above TODO: implement the custom transitions first
+		d3.select("span#level").style("left", function() {
+		       	return Math.round( Insanity.playBox.sizes.width - parseInt(d3.select(this).style("width")) )/2 + "px";
+		});
+
+		return Insanity.prototype.updateState(Insanity.prototype.states.HUDready);
+	},
+
+		// FIXME from HERE - copy&pasted problems ..
+	hideHUD : function() {
+		d3.select("div#top").style("width", w+"px").transition().duration(HUDdurationDisappear)
+			.style("top", function() {return "-"+d3.select(this).style("height")})
+			.each("end", function() {d3.select(this).remove()})
+	},
+
+	createLevel : function(i) {
+		levelUp(); // FIXME
+		return Insanity.prototype.updateState(Insanity.prototype.states.done);
+	},
+
+		// TODO Is this also considered to be part of play box ??
+	renderGUI : function () {
+
+		var divTop = appendDiv().attr("id","top"), topMargin = Math.round(h/10); //FIXME
+
+		divTop.style({
+			background:"transparent",
+			"margin-left":"2em"
+		});
+
+		divTop.append("button").classed("red", true).on("click",function() {deleteHighScores()}).text(delRecsText);
+		divTop.append("button").classed("green", true).on("click",function() {evadeAll();setTimeout(parent.location="manual", HUDdurationDisappear)}).text(manualButtonText);
+
+		divTop.append("button").classed({"green": true, "restart":true}).on("click",function() {disposeProgressBar();evadeAll();setTimeout(parent.location.reload(), HUDdurationDisappear)}).on("mouseover",function(){d3.select(this).text(resetButtonText[1])}).on("mouseout",function(){d3.select(this).text(resetButtonText[0])}).text(resetButtonText[0]);
+
+		d3.select("div#endScreen").style({
+			top: function() {return (divTopHeight+topMargin+parseInt(d3.select(this).style("top")))+"px"},
+			left: function() {return "-"+d3.select(this).style("width")}
+		}).transition().duration(HUDdurationAppear).style("left",Math.round(w/15)+"px");
+
+		divTop.transition().duration(HUDdurationAppear).style("top",(!0 == b?(topMargin):0)+"px");
+	},
+
+		//FIXME to HERE - copy&pasted problems
+
+		// Transitions API
+	transitions : {
+		middleTop : function (text, clazz, color) {
+			var style = {
+				color: color,
+				left: function() {
+					// Put the item in the horizontal middle
+					return (Insanity.playBox.sizes.width - parseInt(d3.select(this).style("width")) )/2 + "px";
+				},
+				"top": Insanity.playBox.sizes.quarterHeight + "px",
+				"opacity": 0
+			};
+
+			var transitions = [
+			{ 
+				"duration" : 590,
+				"style" : {
+					"top" : "0px",
+					"opacity" : 1
+				}
+			},
+			{
+				"duration" : 390,
+				"style" : {
+
+					"top" : function() {
+						return "-" + d3.select(this).style("font-size");
+					},
+
+					"opacity": 0
+				}
+			}
+			];
+
+			Insanity.prototype.transitionsFactory.span(text, style, clazz, transitions);
+		}
+	}
+}
+
+// transitionDefs must be array of Object like this one:
+// { "duration" : 590, "style" : { top: "0px" } } ...
+Insanity.prototype.transitionsFactory = {
+
+	span : function(text, style, clazz, transitionDefs) {
+		var span = body.append("span").attr("class", clazz)
+			.text(text).style(style);
+
+		transitionDefs.forEach(function (transitionDef) {
+
+			// Default duration
+			if (transitionDef.duration === undefined)
+				transitionDef.duration = 500;
+
+			// Default style
+			if (transitionDef.style === undefined)
+				transitionDef.style = { color: "red" , opacity: 1}
+
+
+			transitionDef.style.opacity = 1;
+
+			span = span.transition().duration(transitionDef.duration).style(transitionDef.style);
+		});
+		span.remove();
+	}
+}
+
+Insanity.prototype.states = {
+	"birth" : 0,
+	"countDownComplete" : 1,
+	"HUDready" : 2,
+	"done" : 3
+}
+
+// Argument is set to current integer user see
+Insanity.prototype.handleCountDown = function(i) {
+
+	var color;
+	if (i === undefined) {
+		i = 3;
+		color = "red";
+	} else if (typeof i === "string") {
+		color = "green";
+	} else {
+		color = "orange";
+	}
+
+	Insanity.playBox.transitions.middleTop(i, 'countdown', color);
+
+	if (color === "green") {
+		return Insanity.prototype.done(this.states.countDownComplete);
+	}
+
+	// If the next number is 0, we should show something like Start!
+	if (--i === 0) {
+		i = "Go !!";
+	}
+
+	// Callback in one second
+	return setTimeout(function(){
+		Insanity.prototype.handleCountDown(i)
+	}, 1E3);
+}
+
+Insanity.prototype.updateState = function(state) {
+	// Store last value just in case ..
+	this.previousState = this.state;
+
+	this.state = state;
+}
+
+// Done method should ONLY be called from within the main Insanity() prototype, or after an async call completes
+Insanity.prototype.done = function(state) {
+
+	if (state !== undefined)
+		Insanity.prototype.updateState(state);
+
+	var isAsync = false;
+
+	switch (this.state) {
+		case this.states.birth:
+			isAsync = true;
+			Insanity.prototype.handleCountDown();
+			break;
+		case this.states.countDownComplete:
+			Insanity.playBox.showHUD();
+			break;
+		case this.states.HUDready:
+			Insanity.playBox.createLevel(1);
+			break;
+		case this.states.done:
+			return true;
+		default:
+			break;
+	}
+
+	if (isAsync)
+		return true;
+
+	if (this.previousState === this.state) {
+		console.log("State did not change - ending the logic now.\n Last state: " + this.state);
+		return false;
+	} else {
+		return this.done();
+	}
+}
+
 var version="1.2.2 - debug",svg,radius,downSight,started,columns,ratio,columnsCount,redsInRound,speed,circlesCountAtOnce,optimizedRenderingSpeed,progressAppearDuration,svgWidth,svgHeight,accelerator,bonusGap,summedGaps,circleRoundID,greensInRow,nbsPoints,oldSpeed,scoreBoard,lifesBoard,progressBarHeight,levelProgress,rgRatio,tenLifesBonus,
     w = document.documentElement.clientWidth-1,
     h = document.documentElement.clientHeight-1,
@@ -238,7 +501,7 @@ var version="1.2.2 - debug",svg,radius,downSight,started,columns,ratio,columnsCo
 			    (
 			     d3.selectAll("circle").on("mousedown", null).transition().duration(200).attr("r", 7 * radius / 6).style("opacity", 1E-7).remove().each("end", function() {d3.select("#"+a).remove()})
 			    ) || d3.select("#c" + a).on("mousedown", null).transition().duration(200).attr("r", 7 * radius / 6).style("opacity", 1E-7).remove());
-    }, topBackground = function(b, c) { 
+    }, topBackground = function(b, c) {  // B true -> show using C in appendTopDiv .. false -> hide 
 	    !1 == b ? d3.select("div#top").style("width", w+"px").transition().duration(HUDdurationDisappear)
 		    .style("top", function() {return "-"+d3.select(this).style("height")})
 		    .each("end", function() {d3.select(this).remove()}) :
@@ -300,7 +563,11 @@ var version="1.2.2 - debug",svg,radius,downSight,started,columns,ratio,columnsCo
 	    d3.select("div#lifes").style("display", "block");
 	    d3.selectAll("span").style("display", "inline")
 		    .transition().duration(HUDdurationAppear);
+
+	    // Create nice transition from the middle to above
 	    d3.select("span#level").style("left", function() { return Math.round(w-parseInt(d3.select(this).style("width")))/2+"px"});
+
+	    // Why now ??
 	    levelUp();
     }, decreaseCountdown = function(a) {
 	    var b = body.append("span").attr("class", "countdown")
@@ -341,4 +608,5 @@ var version="1.2.2 - debug",svg,radius,downSight,started,columns,ratio,columnsCo
 	    !1 == a ? (lifes= 5,speed=1) : (lifes= 5000,speed=b);
     };
 
-countDown(4);
+var I = new Insanity();
+//countDown(4);
