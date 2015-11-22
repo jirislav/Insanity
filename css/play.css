@@ -5,15 +5,35 @@ button {font-weight:normal;font-size:2em;border-radius:.8em;padding:.3em;margin:
 svg {position: absolute}
 circle {shape-rendering:optimizeSpeed}
 path {stroke-width:3;fill:none}
-#score {position:absolute;top:0;right:0;margin-right:.5em;display:none}
-#level {position:absolute;top:0;display:none}
+#score {position:absolute;top:0;right:0;margin-right:.5em;display:inline}
+#level {position:absolute;top:0;display:inline}
 #version {display: inline;position: absolute;right:.5em;top:4em;font-size:1em;color: rgba(50, 150, 50, 1)}
-#top {height: 3.8em;background:#e7e7e7;position:absolute;top:-4.4em;margin-left:0}
-#lifes {display:none}
+
+div#top {
+	width:100%;
+	height: 3.8em;
+	background:#e7e7e7;
+	position:absolute;
+	top:-4.4em;
+	margin-left:0
+}
+div#progressBar {
+	background:linear-gradient(to right, #008000 0%, #008000 0%, rgba(255, 255, 0, 0) 3.33333%) repeat scroll 0% 0% transparent;
+	position:absolute;
+	font-size:2em;
+	border-radius:.8em;
+	border-width:2px;
+	border:.08em solid #777;
+	margin-bottom:2px;
+	height:20px;
+	width:90%;
+	left:5%;
+}
+
+#lifes {display:inline}
 #endScreen {position:absolute;left:0;top:1em;color:#333}
 #endScreen div {position:relative}
 div#endScreen span {font-size: 2em}
-#progressBar {background:linear-gradient(to right, #008000 0%, #008000 0%, rgba(255, 255, 0, 0) 3.33333%) repeat scroll 0% 0% transparent;position:absolute;font-size:2em;border-radius:.8em;border:.08em solid #777}
 .flames {background: url(/img/flame3.gif);background-size: 100% 1em;background-repeat: repeat-x}
 .lifes {margin-left:.5em}
 .countdown {font-size:8em;position:absolute;color:red}
