@@ -112,7 +112,6 @@ Insanity.options = {
 	},
 	playground : {
 		maxRatio : 13E-1 // Equals 1.3
-
 	}
 }
 
@@ -139,16 +138,6 @@ Insanity.dynamicVars = {
 	HUDinitialized : false,
 	started : 0
 }
-
-Insanity.helper = {
-	getHorizontalMiddle : function(obj) {
-
-		var objWidth = parseInt( d3.select(obj).style('width') );
-
-		return Math.round( Insanity.playBox.sizes.width - objWidth ) / 2 + "px";
-	}
-}
-
 
 Insanity.playBox = {
 
@@ -248,41 +237,6 @@ Insanity.playBox = {
 		},
 	},
 
-
-		// What the hack ?? :D
-	transitions : {
-		middleTop : function (text, clazz, color) {
-			var style = {
-				color: color,
-				"left" : function() { return Insanity.helper.getHorizontalMiddle(this) },
-				"top": Insanity.playBox.sizes.quarterHeight + "px",
-				"opacity": 0
-			};
-
-			var transitions = [
-			{ 
-				"duration" : 590,
-				"style" : {
-					"top" : "0px",
-					"opacity" : 1
-				}
-			},
-			{
-				"duration" : 390,
-				"style" : {
-
-					"top" : function() {
-						return "-" + d3.select(this).style("font-size");
-					},
-
-					"opacity": 0
-				}
-			}
-			];
-
-			Insanity.prototype.transitionsFactory.createTag('span', text, style, clazz, transitions);
-		}
-	}
 }
 
 Insanity.playBox.HUD = {
@@ -432,7 +386,7 @@ Insanity.playBox.HUD = {
 
 
 		// Apply those defines transitions
-		Insanity.prototype.transitionsFactory
+		Insanity.helper.transitions
 			.applyTransitions( Insanity.staticVars.HUD.levelPtr, transitions );
 	},
 
@@ -440,6 +394,96 @@ Insanity.playBox.HUD = {
 
 	}
 };
+
+Insanity.helper = {
+	getHorizontalMiddle : function(obj) {
+
+		var objWidth = parseInt( d3.select(obj).style('width') );
+
+		return Math.round( Insanity.playBox.sizes.width - objWidth ) / 2 + "px";
+	},
+
+	transitions : {
+		createCountDown : function (text, clazz, color) {
+			var style = {
+				color: color,
+				"left" : function() { return Insanity.helper.getHorizontalMiddle(this) },
+				"top": Insanity.playBox.sizes.quarterHeight + "px",
+				"opacity": 0
+			};
+
+			var transitions = [
+			{ 
+				"duration" : 590,
+				"style" : {
+					"top" : "0px",
+					"opacity" : 1
+				}
+			},
+			{
+				"duration" : 390,
+				"style" : {
+
+					"top" : function() {
+						return "-" + d3.select(this).style("font-size");
+					},
+
+					"opacity": 0
+				}
+			}
+			];
+
+			Insanity.helper.transitions.createTag('span', text, style, clazz, transitions);
+		},
+
+		createTag : function(tag, text, style, clazz, transitionDefs) {
+			var element = body.append(tag).attr("class", clazz)
+				.text(text).style(style);
+
+			Insanity.helper
+				.transitions
+				.applyTransitions( element, transitionDefs);
+
+			return element;
+
+		},
+
+		applyTransitions : function(d3selector, transitionDefs, key, lastKey) {
+
+			if (key === undefined) {
+				var keys = Object.keys(transitionDefs);
+
+				key = parseInt(keys[0]);
+				lastKey = parseInt(keys.pop());
+
+			}
+
+			var transitionDef = transitionDefs[key];
+
+			// Default duration
+			if (transitionDef.duration === undefined)
+				transitionDef.duration = 500;
+
+			// Default style
+			if (transitionDef.style === undefined)
+				transitionDef.style = { color: "red" , opacity: 1}
+
+			var transition = d3selector.transition()
+				.duration(transitionDef.duration)
+				.style(transitionDef.style);
+
+			if ( key !== lastKey ) {
+				transition = transition.each("end", function() {
+					// Do the callback
+					Insanity.helper.transitions.applyTransitions(
+							d3.select(this), transitionDefs, ++key, lastKey
+							);
+				});
+			}
+		}
+	}
+}
+
 
 // Argument is set to current integer user see
 Insanity.prototype.handleCountDown = function(i) {
@@ -454,7 +498,7 @@ Insanity.prototype.handleCountDown = function(i) {
 		color = "orange";
 	}
 
-	Insanity.playBox.transitions.middleTop(i, 'countdown', color);
+	Insanity.helper.transitions.createCountDown(i, 'countdown', color);
 
 	if (color !== "green") {
 
@@ -497,9 +541,9 @@ Insanity.prototype.getScreenSize = function() {
 Insanity.prototype.createEndGameScreen = function () {
 
 	var endScreen = appendDiv("endScreen");
-       	var b = getRec();
-        var e = ( 1e-3 * ( Date.now() - Insanity.dynamicVars.started ));
-       
+	var b = getRec();
+	var e = ( 1e-3 * ( Date.now() - Insanity.dynamicVars.started ));
+
 	var r = endScreen.append("div").classed("record",true).append("span");
 
 	b < score ? (saveRec(),r.text("New record achieved!\n")) : r.text("Your best: "+b);
@@ -569,51 +613,6 @@ Insanity.prototype.createEndGameScreen = function () {
 // { "duration" : 590, "style" : { top: "0px" } } ...
 Insanity.prototype.transitionsFactory = {
 
-	createTag : function(tag, text, style, clazz, transitionDefs) {
-		var element = body.append(tag).attr("class", clazz)
-			.text(text).style(style);
-
-		Insanity.prototype
-			.transitionsFactory
-			.applyTransitions( element, transitionDefs);
-
-		return element;
-
-	},
-
-	applyTransitions : function(d3selector, transitionDefs, key, lastKey) {
-
-		if (key === undefined) {
-			var keys = Object.keys(transitionDefs);
-
-			key = parseInt(keys[0]);
-			lastKey = parseInt(keys.pop());
-
-		}
-
-		var transitionDef = transitionDefs[key];
-
-		// Default duration
-		if (transitionDef.duration === undefined)
-			transitionDef.duration = 500;
-
-		// Default style
-		if (transitionDef.style === undefined)
-			transitionDef.style = { color: "red" , opacity: 1}
-
-		var transition = d3selector.transition()
-			.duration(transitionDef.duration)
-			.style(transitionDef.style);
-
-		if ( key !== lastKey ) {
-			transition = transition.each("end", function() {
-				// Do the callback
-				Insanity.prototype.transitionsFactory.applyTransitions(
-						d3.select(this), transitionDefs, ++key, lastKey
-						);
-			});
-		}
-	}
 }
 
 var version="1.2.2 - debug",svg,radius,downSight,started,columns,ratio,columnsCount,redsInRound,speed,circlesCountAtOnce,optimizedRenderingSpeed,progressAppearDuration,svgWidth,svgHeight,accelerator,bonusGap,summedGaps,circleRoundID,greensInRow,nbsPoints,oldSpeed,scoreBoard,lifesBoard,progressBarHeight,levelProgress,rgRatio,tenLifesBonus,
