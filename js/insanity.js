@@ -56,7 +56,7 @@ Insanity.prototype.done = function(state) {
 			break;
 		case this.states.playgroundCreated:
 
-			Insanity.playBox.playground.startSendingClickables();
+			Insanity.playBox.playground.handler.startSendingClickables();
 			break;
 		case this.states.doneSendingClickables:
 			// Ending the game construction ..
@@ -99,6 +99,20 @@ Insanity.options = {
 
 	levelTransitionDuration: 1400,
 
+		// Decide about the probability of green ones
+	clickable : {
+		greenRate : 0.4,
+		maxCount : 5
+	},
+
+		// The speed is measured in ms / circle to reach the top
+	speed : {
+		initial : 2500,
+		speedUpBy : 20,
+		speedUpEveryClickable : 4,
+		maxSpeed : 500
+	},
+
 	lifes : {
 		initialCount : 5,
 		maxCount : 10
@@ -122,8 +136,8 @@ Insanity.options = {
 Insanity.staticVars = {
 	HUD : {
 		// CSS styles we will soon fetch
-		progressBarHeight : undefined, 
 		topDivHeight : undefined,
+		progressBarHeight : undefined, 
 
 			// Pointers of various elemnents to prevent d3.select() as it's really slow
 		progressBarPtr : undefined,
@@ -131,19 +145,49 @@ Insanity.staticVars = {
 		levelPtr : undefined,
 		scorePtr : undefined,
 
-		exists : false,
-		progressBarExists : false
 	},
 	playground : {
+
 		mainPtr : undefined,
 
-		exists : false
 	}
 }
 
+// TODO All dynamicVars should belong to own Object ..
 Insanity.dynamicVars = {
 	level : 1,
-	started : 0
+	timeStarted : 0,
+
+	lifes : 0,
+	playground : {
+		height : 0,
+		exists : false 
+	},
+	HUD : {
+		progressBarExists : false,
+		exists : false,
+	},
+	clickable : {
+
+		// Hold count of clickables generated current level
+		levelCount : 0,
+
+		// Defines position on Y axis where will be clickable born
+		birthPlace : 0,
+
+		greensInRow : 0,
+
+		circle : {
+			radius : 0,
+		},
+	},
+
+		// Speed is defined in ms / circle needed to reach the top
+	speed : {
+		value : 0,
+		maxReached : false
+	},
+	doWeHaveMouseOverNow : false
 }
 
 Insanity.playBox = {
@@ -194,11 +238,11 @@ Insanity.playBox.playground = {
 
 	create : function() {
 
-		if (Insanity.staticVars.playground.exists) {
+		if (Insanity.dynamicVars.playground.exists) {
 			console.error("Playground already exists, cannot create another !");
 			return false;
 		} else {
-			Insanity.staticVars.playground.exists = true;
+			Insanity.dynamicVars.playground.exists = true;
 		}
 
 		var definition = Insanity.playBox.playground.getSVGdefinition();
@@ -221,9 +265,8 @@ Insanity.playBox.playground = {
 			svgWidth = Math.round( Insanity.options.playground.maxRatio * Insanity.playBox.sizes.height );
 		}
 
-		// The height is about to be Window height - InfoPanel height - progressBar height
-		// which equals all the other space left on the screen until resize
-		var svgHeight = Insanity.playBox.sizes.height - Insanity.staticVars.HUD.topDivHeight - Insanity.staticVars.HUD.progressBarHeight;
+		// TODO: Think about better place to call this helper
+		Insanity.helper.clickable.updateDynamicVars();
 
 		var style =  {
 			"left" : function() { return Insanity.helper.getHorizontalMiddle(this) },
@@ -232,7 +275,7 @@ Insanity.playBox.playground = {
 
 		var attr = {
 			"width" : svgWidth,
-			"height" : svgHeight,
+			"height" : Insanity.dynamicVars.playground.height,
 		};
 
 		return {
@@ -241,12 +284,8 @@ Insanity.playBox.playground = {
 		};
 	},
 
-	fadeOutCircles : function() {
-
-	},
-
 	redraw : function() {
-		if (Insanity.staticVars.playground.exists) {
+		if (Insanity.dynamicVars.playground.exists) {
 			var definition = Insanity.playBox.playground.getSVGdefinition();
 
 			Insanity.staticVars.playground.mainPtr
@@ -257,38 +296,173 @@ Insanity.playBox.playground = {
 
 	remove : function() {
 
-		if (!Insanity.staticVars.playground.exists) {
+		if (!Insanity.dynamicVars.playground.exists) {
 			console.error("Playground does not exist!");
 			return false;
 		} else {
-			Insanity.staticVars.playground.exists = false;
+			Insanity.dynamicVars.playground.exists = false;
 		}
 
-		//TODO: Implement playground removal ..
+		//TODO: Implement playground removal .. it should nicely dispose all clickables & then remove itself
 		return true;
 	},
+};
 
+Insanity.playBox.playground.handler = {
 	startSendingClickables : function() {
-		// TODO ...
 
-		Insanity.dynamicVars.started = Date.now();
+		Insanity.dynamicVars.speed.value = Insanity.options.speed.initial;
+
+		Insanity.helper.callAsync(function() {
+			Insanity.playBox.playground.handler.sendClickable();
+		});
+
+
+		Insanity.dynamicVars.timeStarted = Date.now();
 		return Insanity.prototype.updateState(Insanity.prototype.states.doneSendingClickables);
 	},
 
+	destructDynamicVars : function() {
+		Insanity.dynamicVars.speed.maxReached = false;
+		Insanity.dynamicVars.speed.value = 0;
+
+		Insanity.dynamicVars.clickable.levelCount = 0;
+		Insanity.dynamicVars.clickable.birthPlace = 0;
+		Insanity.dynamicVars.clickable.circle.radius = 0;
+	},
+
 	stopSendingClickables : function() {
+		Insanity.playBox.playground.handler.destructDynamicVars();
+		// TODO: Create global disposal of all the clickables
+	},
+
+	createClickable : function(shape, style, eventName, eventCallback) {
+		++ Insanity.dynamicVars.clickable.levelCount;
+
+		return Insanity.staticVars.playground.mainPtr
+			.append(shape)
+			.style(style)
+			.on(eventName, eventCallback);
+	},
+
+	createCircle : function() {
+
+		// For now we have only two colors ..
+		var color = Math.random() < Insanity.options.clickable.greenRate ? 'green' : 'red';
+
+		var style = {
+			"fill": color,
+		};
+
+		var eventName = Insanity.dynamicVars.doWeHaveMouseOverNow ? 'mouseover' : 'mousedown';
+
+		var eventCallback = function() {
+			Insanity.playBox.playground.handler.processClickableHit(this);
+		};
+
+		return Insanity.playBox.playground.handler.createClickable('circle', style, eventName, eventCallback);
+	},
+
+	sendClickable : function() { // TODO rename sendClickable to sendCircle & implement sendClickable mor uniquely
+
+		Insanity.playBox.playground.handler.updateSpeed();
+
+		// Create circle clickable
+		var clickable = Insanity.playBox.playground.handler.createCircle();
+
+		var radius = Insanity.dynamicVars.clickable.circle.radius;
+
+		// Pick a position & set the radius
+		clickable.attr({
+			"r" : radius,
+			"cy" : Insanity.dynamicVars.clickable.birthPlace - radius,
+			"cx" : Insanity.playBox.playground.handler.pickColumn()
+		});
+
+		clickable.transition()
+			.duration(Insanity.dynamicVars.speed.value)
+			.ease("linear")
+			.attr("cy", -radius)
+			.each("end", function() {
+				Insanity.playBox.playground.handler.clickableReachedEnd(clickable);
+			}).remove();
+
+		var delay = 1.2 * Insanity.dynamicVars.speed.value / Insanity.options.clickable.maxCount;
+		setTimeout(function() {
+			Insanity.playBox.playground.handler.sendClickable();
+		}, delay);
 
 	},
+
+	pickColumn : function() {
+		// TODO implement picking up the column ..
+		return 150;
+	},
+
+	updateSpeed : function() {
+		if (! Insanity.dynamicVars.maxSpeedReached)
+			// Do we have to speed up ?
+			if ( Insanity.dynamicVars.circleRoundID % Insanity.options.speed.speedUpEveryClickable === 0) {
+
+				// Speed it up ..
+				Insanity.dynamicVars.speed -= Insanity.options.speed.speedUpBy;
+
+				// Filter the max speed
+				if (Insanity.dynamicVars.speed < Insanity.options.speed.maxSpeed) {
+					Insanity.dynamicVars.maxSpeedReached = true;
+					Insanity.dynamicVars.speed = Insanity.options.speed.maxSpeed;
+				}
+			}
+	},
+
+	processClickableHit : function(clickable) {
+
+		if (clickable instanceof Element)
+			clickable = d3.select(clickable);
+
+		// If the clickable is red
+		if (Insanity.helper.clickable.isColor('red', clickable)) {
+
+			Insanity.playBox.playground.handler.addLifes(-1);
+
+			Insanity.dynamicVars.clickable.greensInRow = 0;
+		} else {
+			++ Insanity.dynamicVars.clickable.greensInRow;
+			// TODO call CLickedGreen logic instead
+		}
+
+	},
+
+	clickableReachedEnd : function(clickable) {
+		// If the clickable is green
+		if (Insanity.helper.clickable.isColor('green', clickable)) { // FIXME create helper "isColor(color)"
+
+			Insanity.playBox.playground.handler.addLifes(-1);
+
+			Insanity.dynamicVars.clickable.greensInRow = 0;
+		}
+	},
+
+	addLifes : function(count) {
+		// Handle backend ..
+		Insanity.dynamicVars.lifes += count;
+
+		// TODO: End the game if lifes === 0
+
+		// Let the user know
+		Insanity.playBox.HUD.addLifes(count);
+	}
 };
 
 Insanity.playBox.HUD = {
 
 	create : function() {
 
-		if (Insanity.staticVars.HUD.exists) {
+		if (Insanity.dynamicVars.HUD.exists) {
 			console.error("HUD already exists, cannot create another !");
 			return false;
 		} else {
-			Insanity.staticVars.HUD.exists = true;
+			Insanity.dynamicVars.HUD.exists = true;
 		}
 
 		var topDiv = body.append("div").attr("id","top");
@@ -353,11 +527,11 @@ Insanity.playBox.HUD = {
 	},
 
 	remove : function() {
-		if (!Insanity.staticVars.HUD.exists) {
+		if (!Insanity.dynamicVars.HUD.exists) {
 			console.error("HUD does not exist!");
 			return false;
 		} else {
-			Insanity.staticVars.HUD.exists = false;
+			Insanity.dynamicVars.HUD.exists = false;
 		}
 
 		Insanity.staticVars.HUD.topDivPtr
@@ -372,7 +546,7 @@ Insanity.playBox.HUD = {
 	},
 
 	redraw : function() {
-		if (Insanity.staticVars.HUD.exists) {
+		if (Insanity.dynamicVars.HUD.exists) {
 			// Update levelSpan style
 			Insanity.staticVars.HUD.levelPtr.style(Insanity.playBox.HUD.getLevelSpanStyle());
 		}
@@ -417,11 +591,11 @@ Insanity.playBox.HUD = {
 	progressBar : {
 		create : function() {
 
-			if (Insanity.staticVars.HUD.progressBarExists) {
+			if (Insanity.dynamicVars.HUD.progressBarExists) {
 				console.error("Progress bar already exists, cannot create another !");
 				return false;
 			} else {
-				Insanity.staticVars.HUD.progressBarExists = true;
+				Insanity.dynamicVars.HUD.progressBarExists = true;
 			}
 
 			var progressBar = body.append("div").attr("id", "progressBar");
@@ -436,7 +610,7 @@ Insanity.playBox.HUD = {
 				.duration(levelTransitionDuration)
 				.style(Insanity.playBox.HUD.progressBar.getStyle());
 
-			Insanity.staticVars.HUD.progressBarPtr = progressBar;
+			Insanity.dynamicVars.HUD.progressBarPtr = progressBar;
 
 			return true;
 		},
@@ -449,18 +623,18 @@ Insanity.playBox.HUD = {
 
 		remove : function () {
 
-			if (!Insanity.staticVars.HUD.progressBarExists) {
+			if (!Insanity.dynamicVars.HUD.progressBarExists) {
 				console.error("Progress bar does not exist!");
 				return false;
 			} else {
-				Insanity.staticVars.HUD.progressBarExists = false;
+				Insanity.dynamicVars.HUD.progressBarExists = false;
 			}
 
-			Insanity.staticVars.HUD.progressBarPtr
+			Insanity.dynamicVars.HUD.progressBarPtr
 				.transition().duration( Insanity.options.HUD.durationToDisAppear )
 				.style("bottom", "-" + Insanity.staticVars.HUD.progressBarHeight + "px")
 				.each("end", function() {
-					Insanity.staticVars.HUD.progressBarPtr.remove();
+					Insanity.dynamicVars.HUD.progressBarPtr.remove();
 				});
 
 			return true;
@@ -513,8 +687,8 @@ Insanity.playBox.HUD = {
 			.applyTransitions( Insanity.staticVars.HUD.levelPtr, transitions );
 	},
 
-	addLife : function(count) {
-
+	addLifes : function(count) {
+		// TODO
 	}
 };
 
@@ -526,8 +700,43 @@ Insanity.helper = {
 		return Math.round( Insanity.playBox.sizes.width - objWidth ) / 2 + "px";
 	},
 
-	// transitionDefs must be array of Object like this one:
-	// { "duration" : 590, "style" : { top: "0px" } } ...
+	callAsync : function(closure) {
+		if (typeof closure === "function")
+			setTimeout(closure, 10); //Wait 10 ms :)
+	},
+
+	clickable : {
+		updateDynamicVars : function() {
+			// FIXME WARNING ! There must be updated playBox.sizes first !!
+
+			// The height is about to be Window height - InfoPanel height - progressBar height
+			// which equals all the other space left on the screen until resize
+			Insanity.dynamicVars.playground.height = Insanity.playBox.sizes.height - Insanity.staticVars.HUD.topDivHeight - Insanity.staticVars.HUD.progressBarHeight;
+
+			Insanity.dynamicVars.clickable.circle.radius = Insanity.helper.clickable.circle.calculateRadius();
+
+			Insanity.dynamicVars.clickable.birthPlace = Insanity.dynamicVars.playground.height - Insanity.dynamicVars.clickable.circle.radius;
+		},
+		circle : {
+			calculateRadius : function() {
+				// FIXME
+				return 50;
+			}
+		},
+		isColor : function(color, clickable) {
+			switch(color) {
+				case "red":
+					return "rgb(255, 0, 0)" == clickable.style("fill");
+				case "green":
+					return "rgb(0, 128, 0)" == clickable.style("fill");
+				default:
+					return false;
+			}
+		}
+	},
+
+		// transitionDefs must be array of Object like this one:
+		// { "duration" : 590, "style" : { top: "0px" } } ...
 	transitions : {
 		createCountDown : function (text, clazz, color) {
 			var style = {
@@ -627,7 +836,7 @@ Insanity.prototype.createEndGameScreen = function () {
 
 	var endScreen = appendDiv("endScreen");
 	var b = getRec();
-	var e = ( 1e-3 * ( Date.now() - Insanity.dynamicVars.started ));
+	var e = ( 1e-3 * ( Date.now() - Insanity.dynamicVars.timeStarted ));
 
 	var r = endScreen.append("div").classed("record",true).append("span");
 
@@ -1031,11 +1240,6 @@ var version="1.2.2 - debug",svg,radius,downSight,started,columns,ratio,columnsCo
 	    "columns" == a && debugColumns();
 	    !1 == a ? (lifes= 5,speed=1) : (lifes= 5000,speed=b);
     };
-
-var callAsync = function(closure) {
-	if (typeof closure === "function")
-		setTimeout(closure, 10); //Wait 10 ms :)
-}
 
 var I = new Insanity();
 //countDown(4);
