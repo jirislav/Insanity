@@ -874,7 +874,7 @@ Insanity.prototype.createEndGameScreen = function () {
 	divTop.append("button").classed("green", true)
 		.on("click", function() {
 			evadeAll();
-			setTimeout(parent.location="manual", HUDdurationDisappear)
+			setTimeout(parent.location="/manual", HUDdurationDisappear)
 		}).text(manualButtonText);
 
 	divTop.append("button").classed({"green": true, "restart":true})
