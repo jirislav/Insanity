@@ -16,9 +16,9 @@ Insanity
   * Low system requirements
   
 ### Try it out!
-  You can try it out easily by cloning the repository & launching the play.html with your browser, or visit http://insanity.jkozlovsky.cz/?play.
+  You can try it out easily by cloning the repository & launching the play.html with your browser, or visit https://insanity.jkozlovsky.cz/play.
 
-  To find out the rules of the game, visit /manual page (http://insanity.jkozlovsky.cz/manual/)
+  To find out the rules of the game, visit the `/manual` page (https://insanity.jkozlovsky.cz/manual)
 
 ### Author's speech
 
