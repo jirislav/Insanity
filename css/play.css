@@ -1,10 +1,5 @@
 * {margin:0}
-body {
-	background: #eee;
-	overflow: hidden;
-	width: 100%;
-	height: 100%;
-}
+body {background:#eee;overflow:hidden}
 span {font-weight:bold;font-size:3em;-webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none}
 button {font-weight:normal;font-size:2em;border-radius:.8em;padding:.3em;margin:.3em .5em}
 svg {position: absolute}
@@ -13,6 +8,28 @@ path {stroke-width:3;fill:none}
 #score {position:absolute;top:0;right:0;margin-right:.5em;display:inline}
 #level {position:absolute;top:0;display:inline}
 #version {display: inline;position: absolute;right:.5em;top:4em;font-size:1em;color: rgba(50, 150, 50, 1)}
+
+div#top {
+	width:100%;
+	height: 3.8em;
+	background:#e7e7e7;
+	position:absolute;
+	top:-4.4em;
+	margin-left:0
+}
+div#progressBar {
+	background:linear-gradient(to right, #008000 0%, #008000 0%, rgba(255, 255, 0, 0) 3.33333%) repeat scroll 0% 0% transparent;
+	position:absolute;
+	font-size:2em;
+	border-radius:.8em;
+	border-width:2px;
+	border:.08em solid #777;
+	margin-bottom:2px;
+	height:20px;
+	width:90%;
+	left:5%;
+}
+
 #lifes {display:inline}
 #endScreen {position:absolute;left:0;top:1em;color:#333}
 #endScreen div {position:relative}
@@ -24,37 +41,3 @@ div#endScreen span {font-size: 2em}
 .green {color:green}
 .red {color:red}
 .restart {font-weight:bold}
-
-
-hud {
-	width:100%;
-	height: 5%;
-	background:#e7e7e7;
-	position:absolute;
-
-/*	top:-4.4em;*/
-	top: 0px;
-
-	margin-left:0
-}
-
-playground {
-	position: absolute;
-	top: 5%;
-	height: 92%;
-	width: 100%;
-}
-
-progress-bar {
-	left: 0px;
-	position: absolute;
-	width: 100%;
-	height: 3%;
-	bottom: 0px;
-}
-progress-bar table {
-	height: 100%;
-	width: 90%;
-	left: 5%;
-	position: absolute;
-}
